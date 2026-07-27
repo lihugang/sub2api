@@ -2761,7 +2761,7 @@ func (o openAILegacyUpstreamRateOrder) compare(a, b *Account) int {
 }
 
 func openAIFreshUpstreamBillingRate(account *Account, now time.Time) (float64, bool) {
-	if !isUpstreamBillingProbeAccount(account) {
+	if account == nil || !account.IsOpenAIApiKey() {
 		return 0, false
 	}
 	snapshot := decodeUpstreamBillingProbeSnapshot(account.Extra)

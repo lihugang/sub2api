@@ -323,6 +323,44 @@ func TestUpstreamBillingProbeSuccessPersistsSanitizedSnapshot(t *testing.T) {
 	require.Equal(t, snapshot.Status, persisted.Status)
 }
 
+func TestUpstreamBillingProbeSupportsNonOpenAIAPIKeyAccounts(t *testing.T) {
+	account := &Account{
+		ID:          18,
+		Platform:    PlatformGemini,
+		Type:        AccountTypeAPIKey,
+		Status:      StatusActive,
+		Concurrency: 1,
+		Credentials: map[string]any{"api_key": "gemini-sub2api-key", "base_url": "https://upstream.example/gateway"},
+	}
+	ApplyUpstreamBillingProbeNamePolicy(account)
+	repo := &upstreamBillingProbeAccountRepo{accounts: map[int64]*Account{account.ID: account}}
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body: io.NopCloser(strings.NewReader(`{
+			"object":"sub2api.key_billing",
+			"schema_version":1,
+			"billing_scope":"token",
+			"group_rate_multiplier":0.5,
+			"resolved_rate_multiplier":0.5,
+			"peak_rate_enabled":false,
+			"effective_rate_multiplier":0.5,
+			"observed_at":"2026-07-13T01:00:00Z"
+		}`)),
+	}}
+	svc := newUpstreamBillingProbeTestService(repo, upstream, &upstreamBillingProbeSettingRepo{})
+
+	snapshot, err := svc.ProbeAccount(context.Background(), account.ID)
+	require.NoError(t, err)
+	require.Equal(t, UpstreamBillingProbeStatusOK, snapshot.Status)
+	require.True(t, upstreamBillingProbeEnabled(account))
+	require.Equal(t, "https://upstream.example/gateway/v1/sub2api/billing", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer gemini-sub2api-key", upstream.lastReq.Header.Get("Authorization"))
+	require.Equal(t, HTTPUpstreamProfileDefault, HTTPUpstreamProfileFromContext(upstream.lastReq.Context()))
+	require.Equal(t, 70, account.Priority)
+	require.Equal(t, 0.5, account.BillingRateMultiplier())
+}
+
 func TestUpstreamBillingProbeRejectsMissingRequiredMultiplier(t *testing.T) {
 	_, err := parseUpstreamBillingProbeResponse([]byte(`{
 		"object":"sub2api.key_billing",
@@ -566,6 +604,10 @@ func TestUpstreamBillingProbeUnsupportedAndAccountToggle(t *testing.T) {
 	require.Equal(t, 2, snapshot.FailureCount)
 	require.False(t, snapshot.NextProbeAt.Before(fixedNow.Add(24*time.Minute)))
 	require.False(t, snapshot.NextProbeAt.After(fixedNow.Add(36*time.Minute)))
+
+	upstreamCalls := len(upstream.requests)
+	require.NoError(t, svc.RunDue(context.Background()))
+	require.Len(t, upstream.requests, upstreamCalls, "unsupported accounts must not be scheduled again")
 
 	invalid := &Account{ID: 20, Platform: PlatformOpenAI, Type: AccountTypeOAuth}
 	repo.accounts[invalid.ID] = invalid

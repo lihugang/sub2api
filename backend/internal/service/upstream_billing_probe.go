@@ -51,7 +51,7 @@ var (
 		"UPSTREAM_BILLING_PROBE_UNAVAILABLE", "upstream billing probe is unavailable",
 	)
 	ErrUpstreamBillingProbeAccountInvalid = infraerrors.BadRequest(
-		"UPSTREAM_BILLING_PROBE_ACCOUNT_INVALID", "account is not an OpenAI API key account",
+		"UPSTREAM_BILLING_PROBE_ACCOUNT_INVALID", "account is not an API key account with a custom upstream base URL",
 	)
 	ErrUpstreamBillingProbeIdentityChanged = infraerrors.Conflict(
 		"UPSTREAM_BILLING_PROBE_IDENTITY_CHANGED", "account identity changed during upstream billing probe; retry the probe",
@@ -336,6 +336,9 @@ func (s *UpstreamBillingProbeService) RunDue(ctx context.Context) error {
 			continue
 		}
 		snapshot := decodeUpstreamBillingProbeSnapshot(account.Extra)
+		if snapshot != nil && snapshot.Status == UpstreamBillingProbeStatusUnsupported {
+			continue
+		}
 		if snapshot != nil && !snapshot.NextProbeAt.IsZero() && now.Before(snapshot.NextProbeAt) {
 			continue
 		}
@@ -441,9 +444,13 @@ func (s *UpstreamBillingProbeService) probeAccountWithMode(ctx context.Context, 
 			if !account.IsActive() || !upstreamBillingProbeEnabled(account) {
 				return nil, nil
 			}
-			if snapshot := decodeUpstreamBillingProbeSnapshot(account.Extra); snapshot != nil &&
-				!snapshot.NextProbeAt.IsZero() && s.currentTime().Before(snapshot.NextProbeAt) {
-				return nil, nil
+			if snapshot := decodeUpstreamBillingProbeSnapshot(account.Extra); snapshot != nil {
+				if snapshot.Status == UpstreamBillingProbeStatusUnsupported {
+					return nil, nil
+				}
+				if !snapshot.NextProbeAt.IsZero() && s.currentTime().Before(snapshot.NextProbeAt) {
+					return nil, nil
+				}
 			}
 		}
 		return s.probeLoadedAccount(ctx, account, intervalMinutes)
@@ -555,13 +562,13 @@ func (s *UpstreamBillingProbeService) probeLoadedAccount(ctx context.Context, ac
 	if s.accountTestService == nil || s.accountTestService.httpUpstream == nil {
 		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "transport_unavailable", 0)
 	}
-	apiKey := account.GetOpenAIApiKey()
+	apiKey := strings.TrimSpace(account.GetCredential("api_key"))
 	if apiKey == "" {
 		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "missing_api_key", 0)
 	}
-	baseURL := account.GetOpenAIBaseURL()
+	baseURL := strings.TrimSpace(account.GetCredential("base_url"))
 	if baseURL == "" {
-		baseURL = "https://api.openai.com"
+		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "missing_base_url", 0)
 	}
 	normalizedBaseURL, err := s.accountTestService.validateUpstreamBaseURL(baseURL)
 	if err != nil {
@@ -584,8 +591,7 @@ func (s *UpstreamBillingProbeService) probeLoadedAccount(ctx context.Context, ac
 	if err != nil {
 		return s.persistProbeFailure(ctx, account, intervalMinutes, now, 0, "request_build_failed", 0)
 	}
-	reqCtx := WithHTTPUpstreamProfile(req.Context(), HTTPUpstreamProfileOpenAI)
-	req = req.WithContext(WithHTTPUpstreamRedirectsDisabled(reqCtx))
+	req = req.WithContext(WithHTTPUpstreamRedirectsDisabled(req.Context()))
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	account.ApplyHeaderOverrides(req.Header)
@@ -847,20 +853,31 @@ func decodeUpstreamBillingProbeSnapshot(extra map[string]any) *UpstreamBillingPr
 	return &snapshot
 }
 
-func isUpstreamBillingProbeAccount(account *Account) bool {
-	return account != nil && account.Platform == PlatformOpenAI && account.Type == AccountTypeAPIKey
+// IsUpstreamBillingProbeAccount reports whether an account has the credentials
+// needed to query the Sub2API billing declaration endpoint. The platform is
+// intentionally not part of this check: Sub2API may be configured behind any
+// API Key account type.
+func IsUpstreamBillingProbeAccount(account *Account) bool {
+	return account != nil && account.Type == AccountTypeAPIKey &&
+		strings.TrimSpace(account.GetCredential("api_key")) != "" &&
+		strings.TrimSpace(account.GetCredential("base_url")) != ""
 }
 
-// ApplyUpstreamBillingProbeNamePolicy makes the account name the sole source
-// of truth for whether the periodic upstream billing probe is enabled.
+func isUpstreamBillingProbeAccount(account *Account) bool {
+	return IsUpstreamBillingProbeAccount(account)
+}
+
+// ApplyUpstreamBillingProbeNamePolicy enables periodic probing for API key
+// accounts with an explicit upstream URL. The lowercase "free" marker keeps
+// the long-standing opt-out behavior for free accounts.
 func ApplyUpstreamBillingProbeNamePolicy(account *Account) {
-	if !isUpstreamBillingProbeAccount(account) {
+	if account == nil {
 		return
 	}
 	if account.Extra == nil {
 		account.Extra = make(map[string]any)
 	}
-	account.Extra[UpstreamBillingProbeEnabledExtraKey] = !strings.Contains(account.Name, "free")
+	account.Extra[UpstreamBillingProbeEnabledExtraKey] = isUpstreamBillingProbeAccount(account) && !strings.Contains(account.Name, "free")
 }
 
 func applyUpstreamBillingProbeAccountRates(snapshot *UpstreamBillingProbeSnapshot) error {

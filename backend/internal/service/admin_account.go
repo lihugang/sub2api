@@ -999,11 +999,15 @@ func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUp
 	if _, err := s.accountRepo.BulkUpdate(ctx, input.AccountIDs, repoUpdates); err != nil {
 		return nil, err
 	}
-	if input.Name != "" {
-		enabled := !strings.Contains(input.Name, "free")
+	if input.Name != "" || updatesUpstreamBillingProbeIdentity(input.Credentials) {
 		for _, account := range cachedTargets {
-			if account != nil && isUpstreamBillingProbeAccount(account) {
-				if err := s.accountRepo.UpdateExtra(ctx, account.ID, map[string]any{UpstreamBillingProbeEnabledExtraKey: enabled}); err != nil {
+			if account != nil {
+				updated, err := s.accountRepo.GetByID(ctx, account.ID)
+				if err != nil {
+					return nil, err
+				}
+				ApplyUpstreamBillingProbeNamePolicy(updated)
+				if err := s.accountRepo.UpdateExtra(ctx, updated.ID, map[string]any{UpstreamBillingProbeEnabledExtraKey: updated.Extra[UpstreamBillingProbeEnabledExtraKey]}); err != nil {
 					return nil, err
 				}
 			}

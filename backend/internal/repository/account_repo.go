@@ -625,7 +625,7 @@ func lockAndMergeAccountProbeExtra(ctx context.Context, client *dbent.Client, ac
 		delete(extra, key)
 	}
 	probeExplicitlyDisabled := false
-	probeAccount := account.Platform == service.PlatformOpenAI && account.Type == service.AccountTypeAPIKey
+	probeAccount := service.IsUpstreamBillingProbeAccount(account)
 	if probeAccount && explicitProbeEnabled != nil {
 		extra[service.UpstreamBillingProbeEnabledExtraKey] = *explicitProbeEnabled
 		probeExplicitlyDisabled = !*explicitProbeEnabled
@@ -3396,7 +3396,6 @@ func (r *accountRepository) ListDueUpstreamBillingProbeAccounts(ctx context.Cont
 			FROM accounts
 			WHERE deleted_at IS NULL
 				AND status = 'active'
-				AND platform = 'openai'
 				AND type = 'apikey'
 				AND extra @> '{"upstream_billing_probe_enabled": true}'::jsonb
 		), parsed AS MATERIALIZED (
@@ -3430,11 +3429,14 @@ func (r *accountRepository) ListDueUpstreamBillingProbeAccounts(ctx context.Cont
 		)
 		SELECT id
 		FROM normalized
-		WHERE probe_status NOT IN ('ok', 'unsupported', 'failed')
+		WHERE probe_status IS DISTINCT FROM 'unsupported'
+			AND (
+			probe_status NOT IN ('ok', 'unsupported', 'failed')
 			OR probe_status IS NULL
 			OR next_probe_at IS NULL
 			OR NOT valid_next_probe_at
 			OR CASE WHEN valid_next_probe_at THEN parsed_next_probe_at::timestamptz <= $1 ELSE FALSE END
+			)
 		ORDER BY
 			CASE
 				WHEN probe_status NOT IN ('ok', 'unsupported', 'failed')
