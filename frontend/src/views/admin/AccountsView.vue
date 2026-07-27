@@ -801,6 +801,11 @@ const getSchedulerScoreRows = (account: Account): AccountSchedulerGroupScore[] =
   return []
 }
 
+const getSchedulerScoreSortValue = (account: Account): number | null => {
+  const score = account.scheduler_score?.base_score
+  return typeof score === 'number' && Number.isFinite(score) ? score : null
+}
+
 const formatSchedulerScoreGroup = (score: AccountSchedulerGroupScore): string => {
   if ('group_name' in score && score.group_name) return score.group_name
   if ('group_id' in score && score.group_id != null) return `#${score.group_id}`
@@ -1489,7 +1494,14 @@ const allColumns = computed(() => {
   c.push(
     { key: 'proxy', label: t('admin.accounts.columns.proxy'), sortable: false },
     { key: 'priority', label: t('admin.accounts.columns.priority'), sortable: true },
-    { key: 'scheduler_score', label: t('admin.accounts.columns.schedulerScore'), sortable: false },
+    {
+      key: 'scheduler_score',
+      label: t('admin.accounts.columns.schedulerScore'),
+      sortable: true,
+      clientSideSort: true,
+      sortValue: getSchedulerScoreSortValue,
+      sortNullsLast: true
+    },
     { key: 'rate_multiplier', label: t('admin.accounts.columns.billingRateMultiplier'), sortable: true },
     { key: 'upstream_billing_rate', label: t('admin.accounts.columns.upstreamBillingRate'), sortable: true },
     { key: 'last_used_at', label: t('admin.accounts.columns.lastUsed'), sortable: true },

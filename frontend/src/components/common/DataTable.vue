@@ -450,7 +450,8 @@ interface Props {
   sortStorageKey?: string
   /**
    * Enable server-side sorting mode. When true, clicking sort headers
-   * will emit 'sort' events instead of performing client-side sorting.
+   * will emit 'sort' events instead of performing client-side sorting,
+   * except for columns marked with `clientSideSort`.
    */
   serverSideSort?: boolean
   /** Emit 'rowClick' on row/card click and show pointer cursor (interactive cells should @click.stop) */
@@ -674,7 +675,8 @@ const handleSort = (key: string) => {
     newOrder = sortOrder.value === 'asc' ? 'desc' : 'asc'
   }
 
-  if (props.serverSideSort) {
+  const column = props.columns.find((item) => item.key === key)
+  if (props.serverSideSort && !column?.clientSideSort) {
     // Server-side sort mode: emit event and update internal state for UI feedback
     sortKey.value = key
     sortOrder.value = newOrder
@@ -687,17 +689,26 @@ const handleSort = (key: string) => {
 }
 
 const sortedData = computed(() => {
-  // Server-side sort mode: return data as-is (server handles sorting)
-  if (props.serverSideSort || !sortKey.value || !props.data) return props.data
+  if (!sortKey.value || !props.data) return props.data
 
   const key = sortKey.value
   const order = sortOrder.value
+  const column = props.columns.find((item) => item.key === key)
+  // Server-side sort mode only delegates columns that are not explicitly local.
+  if (props.serverSideSort && !column?.clientSideSort) return props.data
 
   // Stable sort (tie-break with original index) to avoid jitter when values are equal.
   return props.data
     .map((row, index) => ({ row, index }))
     .sort((a, b) => {
-      const cmp = compareSortValues(a.row?.[key], b.row?.[key])
+      const aValue = column?.sortValue ? column.sortValue(a.row) : a.row?.[key]
+      const bValue = column?.sortValue ? column.sortValue(b.row) : b.row?.[key]
+      if (column?.sortNullsLast) {
+        const aEmpty = isNullishOrEmpty(aValue)
+        const bEmpty = isNullishOrEmpty(bValue)
+        if (aEmpty !== bEmpty) return aEmpty ? 1 : -1
+      }
+      const cmp = compareSortValues(aValue, bValue)
       if (cmp !== 0) return order === 'asc' ? cmp : -cmp
       return a.index - b.index
     })
