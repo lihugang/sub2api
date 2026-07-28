@@ -340,6 +340,7 @@ type CreateAccountInput struct {
 	Concurrency        int
 	Priority           int
 	RateMultiplier     *float64 // 账号计费倍率（>=0，允许 0）
+	OAuthSettlementCost *float64 // OAuth 删除时一次性分摊的账号成本（USD）
 	LoadFactor         *int
 	GroupIDs           []int64
 	ExpiresAt          *int64
@@ -371,6 +372,7 @@ type UpdateAccountInput struct {
 	Concurrency           *int     // 使用指针区分"未提供"和"设置为0"
 	Priority              *int     // 使用指针区分"未提供"和"设置为0"
 	RateMultiplier        *float64 // 账号计费倍率（>=0，允许 0）
+	OAuthSettlementCost   *float64 // OAuth 删除时一次性分摊的账号成本（USD）
 	LoadFactor            *int
 	Status                string
 	GroupIDs              *[]int64

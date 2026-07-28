@@ -108,6 +108,17 @@ func (User) Fields() []ent.Field {
 		field.String("balance_notify_extra_emails").
 			SchemaType(map[string]string{dialect.Postgres: "text"}).
 			Default("[]"),
+		// 网关账号提示的呈现方式：disabled | plain | color。
+		field.String("model_routing_notice_mode").
+			Validate(func(value string) error {
+				switch value {
+				case "disabled", "plain", "color":
+					return nil
+				default:
+					return fmt.Errorf("must be one of disabled, plain, color")
+				}
+			}).
+			Default("color"),
 		field.Float("total_recharged").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
 			Default(0),

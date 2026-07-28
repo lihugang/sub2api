@@ -13,15 +13,21 @@ func TestGatewayAccountNoticeText(t *testing.T) {
 	account := &Account{ID: 42, Name: "primary\n\taccount", RateMultiplier: &rate}
 
 	require.Equal(t,
-		"\x1b[93m[Corgi AI Gateway]\x1b[97m 当前正在使用 \x1b[96m#42 primary account\x1b[97m 账号，计费倍率 \x1b[96m1.25\x1b[0m\n",
+		"\x1b[93m[Corgi AI Gateway]\x1b[97m 当前正在使用 \x1b[96m#42 primary account\x1b[97m 账号，计费倍率 \x1b[96m1.25\x1b[0m\n\n",
 		GatewayAccountNoticeText(account),
 	)
 
 	zero := 0.0
-	require.Contains(t, GatewayAccountNoticeText(&Account{ID: 7, Name: "free", RateMultiplier: &zero}), "\x1b[96m0\x1b[0m\n")
-	require.Contains(t, GatewayAccountNoticeText(&Account{ID: 8, Name: "legacy"}), "\x1b[96m1\x1b[0m\n")
+	require.Contains(t, GatewayAccountNoticeText(&Account{ID: 7, Name: "free", RateMultiplier: &zero}), "\x1b[96m0\x1b[0m\n\n")
+	require.Contains(t, GatewayAccountNoticeText(&Account{ID: 8, Name: "legacy"}), "\x1b[96m1\x1b[0m\n\n")
 	invalid := math.NaN()
-	require.Contains(t, GatewayAccountNoticeText(&Account{ID: 9, Name: "invalid", RateMultiplier: &invalid}), "\x1b[96m1\x1b[0m\n")
+	require.Contains(t, GatewayAccountNoticeText(&Account{ID: 9, Name: "invalid", RateMultiplier: &invalid}), "\x1b[96m1\x1b[0m\n\n")
+
+	require.Equal(t,
+		"[Corgi AI Gateway] 当前正在使用 #42 primary account 账号，计费倍率 1.25\n\n",
+		GatewayAccountNoticeText(account, ModelRoutingNoticeModePlain),
+	)
+	require.Empty(t, GatewayAccountNoticeText(account, ModelRoutingNoticeModeDisabled))
 }
 
 func TestStripGatewayAccountNoticeFromBody(t *testing.T) {
@@ -96,6 +102,19 @@ func TestStripGatewayAccountNoticeFromBody(t *testing.T) {
 	var request map[string]any
 	require.NoError(t, json.Unmarshal(cleaned, &request))
 	messages := request["messages"].([]any)
+	require.Equal(t, "answer", messages[0].(map[string]any)["content"])
+
+	body, err = json.Marshal(map[string]any{
+		"messages": []any{map[string]any{
+			"role":    "assistant",
+			"content": GatewayAccountNoticeText(&Account{ID: 1, Name: "one"}, ModelRoutingNoticeModePlain) + "answer",
+		}},
+	})
+	require.NoError(t, err)
+	cleaned, changed = StripGatewayAccountNoticeFromBody(body)
+	require.True(t, changed)
+	require.NoError(t, json.Unmarshal(cleaned, &request))
+	messages = request["messages"].([]any)
 	require.Equal(t, "answer", messages[0].(map[string]any)["content"])
 }
 

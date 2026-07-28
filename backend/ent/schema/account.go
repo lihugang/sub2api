@@ -113,6 +113,14 @@ func (Account) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
 			Default(1.0),
 
+		// oauth_settlement_cost is the one-time upstream account cost allocated
+		// to users when an OAuth primary account is deleted. It never affects
+		// request-time user billing.
+		field.Float("oauth_settlement_cost").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,10)"}),
+
 		// status: 账户状态，如 "active", "error", "disabled"
 		field.String("status").
 			MaxLen(20).

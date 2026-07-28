@@ -204,7 +204,7 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 		}
 		account := selection.Account
 		setOpsSelectedAccount(c, account.ID, account.Platform)
-		service.SetGatewayAccountNotice(c, service.GatewayAccountNoticeOpenAIChat, previousSessionAccountID, account)
+		service.SetGatewayAccountNotice(c, service.GatewayAccountNoticeOpenAIChat, previousSessionAccountID, account, service.ModelRoutingNoticeModeForUser(apiKey.User))
 
 		// 4. Acquire account concurrency slot
 		accountReleaseFunc := selection.ReleaseFunc

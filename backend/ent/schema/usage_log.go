@@ -33,7 +33,11 @@ func (UsageLog) Fields() []ent.Field {
 	return []ent.Field{
 		// 关联字段
 		field.Int64("user_id"),
-		field.Int64("api_key_id"),
+		// api_key_id is NULL only for internal account-cost settlement rows.
+		// Normal gateway request rows continue to require an API key.
+		field.Int64("api_key_id").
+			Optional().
+			Nillable(),
 		field.Int64("account_id"),
 		field.String("request_id").
 			MaxLen(64).
@@ -41,6 +45,9 @@ func (UsageLog) Fields() []ent.Field {
 		field.String("model").
 			MaxLen(100).
 			NotEmpty(),
+		field.String("record_type").
+			MaxLen(32).
+			Default("request"),
 		// RequestedModel stores the client-requested model name for stable display and analytics.
 		// NULL means historical rows written before requested_model dual-write was introduced.
 		field.String("requested_model").
@@ -189,7 +196,6 @@ func (UsageLog) Edges() []ent.Edge {
 		edge.From("api_key", APIKey.Type).
 			Ref("usage_logs").
 			Field("api_key_id").
-			Required().
 			Unique(),
 		edge.From("account", Account.Type).
 			Ref("usage_logs").

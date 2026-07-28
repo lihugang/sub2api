@@ -1,10 +1,41 @@
 package service
 
 import (
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+const (
+	ModelRoutingNoticeModeDisabled = "disabled"
+	ModelRoutingNoticeModePlain    = "plain"
+	ModelRoutingNoticeModeColor    = "color"
+)
+
+func NormalizeModelRoutingNoticeMode(value string) string {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case ModelRoutingNoticeModeDisabled:
+		return ModelRoutingNoticeModeDisabled
+	case ModelRoutingNoticeModePlain:
+		return ModelRoutingNoticeModePlain
+	case ModelRoutingNoticeModeColor, "":
+		return ModelRoutingNoticeModeColor
+	default:
+		return ""
+	}
+}
+
+func IsModelRoutingNoticeMode(value string) bool {
+	return NormalizeModelRoutingNoticeMode(value) != ""
+}
+
+func ModelRoutingNoticeModeForUser(user *User) string {
+	if user == nil {
+		return ModelRoutingNoticeModeColor
+	}
+	return NormalizeModelRoutingNoticeMode(user.ModelRoutingNoticeMode)
+}
 
 type User struct {
 	ID             int64
@@ -49,6 +80,7 @@ type User struct {
 	BalanceNotifyThresholdType string // "fixed" (default) | "percentage"
 	BalanceNotifyThreshold     *float64
 	BalanceNotifyExtraEmails   []NotifyEmailEntry
+	ModelRoutingNoticeMode     string
 	TotalRecharged             float64
 
 	// RPMLimit 用户级每分钟请求数上限（0 = 不限制）。仅在所用分组未设置 rpm_limit

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"maps"
 	"net/http"
 	"reflect"
@@ -298,6 +299,7 @@ func (s *adminServiceImpl) DuplicateAccount(ctx context.Context, id int64, actor
 		Concurrency:           source.Concurrency,
 		Priority:              source.Priority,
 		RateMultiplier:        cloneAccountValuePointer(source.RateMultiplier),
+		OAuthSettlementCost:   cloneAccountValuePointer(source.OAuthSettlementCost),
 		LoadFactor:            cloneAccountValuePointer(source.LoadFactor),
 		GroupIDs:              groupIDs,
 		ExpiresAt:             expiresAt,
@@ -490,11 +492,23 @@ func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]an
 	} else {
 		account.AutoPauseOnExpired = true
 	}
-	if input.RateMultiplier != nil {
+	if account.Type == AccountTypeOAuth {
+		zero := 0.0
+		account.RateMultiplier = &zero
+	} else if input.RateMultiplier != nil {
 		if *input.RateMultiplier < 0 {
 			return nil, errors.New("rate_multiplier must be >= 0")
 		}
 		account.RateMultiplier = input.RateMultiplier
+	}
+	if input.OAuthSettlementCost != nil {
+		if account.Type != AccountTypeOAuth {
+			return nil, errors.New("oauth_settlement_cost is only supported for oauth accounts")
+		}
+		if *input.OAuthSettlementCost < 0 || math.IsNaN(*input.OAuthSettlementCost) || math.IsInf(*input.OAuthSettlementCost, 0) {
+			return nil, errors.New("oauth_settlement_cost must be a non-negative finite number")
+		}
+		account.OAuthSettlementCost = input.OAuthSettlementCost
 	}
 	if input.LoadFactor != nil && *input.LoadFactor > 0 {
 		if *input.LoadFactor > 10000 {
@@ -745,11 +759,23 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 	if input.Priority != nil {
 		account.Priority = *input.Priority
 	}
-	if input.RateMultiplier != nil {
+	if account.Type == AccountTypeOAuth {
+		zero := 0.0
+		account.RateMultiplier = &zero
+	} else if input.RateMultiplier != nil {
 		if *input.RateMultiplier < 0 {
 			return nil, errors.New("rate_multiplier must be >= 0")
 		}
 		account.RateMultiplier = input.RateMultiplier
+	}
+	if input.OAuthSettlementCost != nil {
+		if account.Type != AccountTypeOAuth {
+			return nil, errors.New("oauth_settlement_cost is only supported for oauth accounts")
+		}
+		if *input.OAuthSettlementCost < 0 || math.IsNaN(*input.OAuthSettlementCost) || math.IsInf(*input.OAuthSettlementCost, 0) {
+			return nil, errors.New("oauth_settlement_cost must be a non-negative finite number")
+		}
+		account.OAuthSettlementCost = input.OAuthSettlementCost
 	}
 	if input.LoadFactor != nil {
 		if *input.LoadFactor <= 0 {

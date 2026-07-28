@@ -727,6 +727,15 @@ export default {
       unverified: '未验证',
       verified: '已验证',
     },
+    modelRoutingNotice: {
+      title: '模型路由提示',
+      description: '控制 API 网关是否在回复开头显示当前使用的账号和计费倍率。',
+      mode: '提示方式',
+      disabled: '禁用',
+      plain: '启用（无颜色）',
+      color: '启用（多颜色）',
+      saveFailed: '保存模型路由提示设置失败',
+    },
     avatar: {
       title: '资料头像',
       description: '仅支持上传头像图片；静态图片会自动压缩到 20KB 以内后再保存。',

@@ -722,6 +722,15 @@ export default {
       unverified: 'Unverified',
       verified: 'Verified',
     },
+    modelRoutingNotice: {
+      title: 'Model Routing Notice',
+      description: 'Control whether the API gateway prefixes replies with the selected account and billing multiplier.',
+      mode: 'Notice Style',
+      disabled: 'Disabled',
+      plain: 'Enabled (Plain)',
+      color: 'Enabled (Color)',
+      saveFailed: 'Failed to save model routing notice setting',
+    },
     avatar: {
       title: 'Profile Avatar',
       description: 'Upload an avatar image. Static uploads are compressed to 20KB before saving.',

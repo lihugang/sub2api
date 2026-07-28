@@ -81,6 +81,7 @@ type UpdateProfileRequest struct {
 	AvatarURL              *string  `json:"avatar_url"`
 	BalanceNotifyEnabled   *bool    `json:"balance_notify_enabled"`
 	BalanceNotifyThreshold *float64 `json:"balance_notify_threshold"`
+	ModelRoutingNoticeMode *string  `json:"model_routing_notice_mode"`
 }
 
 type userProfileResponse struct {
@@ -178,6 +179,7 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		AvatarURL:              req.AvatarURL,
 		BalanceNotifyEnabled:   req.BalanceNotifyEnabled,
 		BalanceNotifyThreshold: req.BalanceNotifyThreshold,
+		ModelRoutingNoticeMode: req.ModelRoutingNoticeMode,
 	}
 	updatedUser, err := h.userService.UpdateProfile(c.Request.Context(), subject.UserID, svcReq)
 	if err != nil {

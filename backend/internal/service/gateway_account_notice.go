@@ -46,11 +46,11 @@ type GatewayAccountNoticeTransformer struct {
 
 // NewGatewayAccountNoticeTransformer creates a protocol-aware transformer
 // when a session is new or has switched accounts. A nil result is a no-op.
-func NewGatewayAccountNoticeTransformer(mode GatewayAccountNoticeMode, previousAccountID int64, account *Account) *GatewayAccountNoticeTransformer {
+func NewGatewayAccountNoticeTransformer(mode GatewayAccountNoticeMode, previousAccountID int64, account *Account, noticeModes ...string) *GatewayAccountNoticeTransformer {
 	if account == nil || (previousAccountID > 0 && previousAccountID == account.ID) {
 		return nil
 	}
-	text := GatewayAccountNoticeText(account)
+	text := GatewayAccountNoticeText(account, noticeModes...)
 	if text == "" {
 		return nil
 	}
@@ -78,28 +78,39 @@ func (t *GatewayAccountNoticeTransformer) TransformJSON(data []byte) []byte {
 }
 
 // GatewayAccountNoticeText returns the stable user-facing account banner.
-func GatewayAccountNoticeText(account *Account) string {
+func GatewayAccountNoticeText(account *Account, noticeModes ...string) string {
 	if account == nil {
+		return ""
+	}
+	noticeMode := ""
+	if len(noticeModes) > 0 {
+		noticeMode = noticeModes[0]
+	}
+	noticeMode = NormalizeModelRoutingNoticeMode(noticeMode)
+	if noticeMode == ModelRoutingNoticeModeDisabled {
 		return ""
 	}
 	name := strings.Join(strings.FieldsFunc(strings.TrimSpace(account.Name), unicode.IsControl), " ")
 	name = strings.Join(strings.Fields(name), " ")
 	rate := strconv.FormatFloat(account.BillingRateMultiplier(), 'f', -1, 64)
+	if noticeMode == ModelRoutingNoticeModePlain {
+		return gatewayAccountNoticePrefix + " 当前正在使用 #" + strconv.FormatInt(account.ID, 10) + " " + name + " 账号，计费倍率 " + rate + "\n\n"
+	}
 	return gatewayAccountNoticeColorGateway + gatewayAccountNoticePrefix +
 		gatewayAccountNoticeColorText + " 当前正在使用 " +
 		gatewayAccountNoticeColorValue + "#" + strconv.FormatInt(account.ID, 10) + " " + name +
 		gatewayAccountNoticeColorText + " 账号，计费倍率 " +
-		gatewayAccountNoticeColorValue + rate + gatewayAccountNoticeColorReset + "\n"
+		gatewayAccountNoticeColorValue + rate + gatewayAccountNoticeColorReset + "\n\n"
 }
 
 // SetGatewayAccountNotice schedules a banner for the first real assistant text
 // emitted by this response. It intentionally does nothing when routing remains
 // on the bound account.
-func SetGatewayAccountNotice(c *gin.Context, mode GatewayAccountNoticeMode, previousAccountID int64, account *Account) {
+func SetGatewayAccountNotice(c *gin.Context, mode GatewayAccountNoticeMode, previousAccountID int64, account *Account, noticeModes ...string) {
 	if c == nil || account == nil || (previousAccountID > 0 && previousAccountID == account.ID) {
 		return
 	}
-	text := GatewayAccountNoticeText(account)
+	text := GatewayAccountNoticeText(account, noticeModes...)
 	if text == "" {
 		return
 	}
@@ -288,7 +299,7 @@ func gatewayNoticeMessageHasNonTextContent(message map[string]any) bool {
 func stripGatewayNoticePrefix(text string) (string, bool) {
 	if strings.HasPrefix(text, gatewayAccountNoticeColorGateway+gatewayAccountNoticePrefix) {
 		if newline := strings.IndexByte(text, '\n'); newline >= 0 {
-			return text[newline+1:], true
+			return strings.TrimLeft(text[newline+1:], "\r\n"), true
 		}
 		return "", true
 	}
@@ -296,7 +307,7 @@ func stripGatewayNoticePrefix(text string) (string, bool) {
 		return text, false
 	}
 	if newline := strings.IndexByte(text, '\n'); newline >= 0 {
-		return text[newline+1:], true
+		return strings.TrimLeft(text[newline+1:], "\r\n"), true
 	}
 	return "", true
 }
