@@ -19,7 +19,7 @@ func (r *usageLogRepository) getPerformanceStats(ctx context.Context, userID int
 			COUNT(*) as request_count,
 			COALESCE(SUM(input_tokens + output_tokens), 0) as token_count
 		FROM usage_logs
-		WHERE created_at >= $1`
+	WHERE created_at >= $1 AND record_type = 'request'`
 	args := []any{fiveMinutesAgo}
 	if userID > 0 {
 		query += " AND user_id = $2"
@@ -54,7 +54,7 @@ func (r *usageLogRepository) GetUserStats(ctx context.Context, userID int64, sta
 			COALESCE(SUM(output_tokens), 0) as output_tokens,
 			COALESCE(SUM(cache_read_tokens), 0) as cache_read_tokens
 		FROM usage_logs
-		WHERE user_id = $1 AND created_at >= $2 AND created_at < $3
+		WHERE user_id = $1 AND record_type = 'request' AND created_at >= $2 AND created_at < $3
 	`
 
 	stats := &UserStats{}
@@ -414,7 +414,7 @@ func (r *usageLogRepository) GetUserDashboardStats(ctx context.Context, userID i
 			COALESCE(SUM(actual_cost), 0) as total_actual_cost,
 			COALESCE(AVG(duration_ms), 0) as avg_duration_ms
 		FROM usage_logs
-		WHERE user_id = $1
+		WHERE user_id = $1 AND record_type = 'request'
 	`
 	if err := scanSingleRow(
 		ctx,
@@ -445,7 +445,7 @@ func (r *usageLogRepository) GetUserDashboardStats(ctx context.Context, userID i
 			COALESCE(SUM(total_cost), 0) as today_cost,
 			COALESCE(SUM(actual_cost), 0) as today_actual_cost
 		FROM usage_logs
-		WHERE user_id = $1 AND created_at >= $2
+		WHERE user_id = $1 AND record_type = 'request' AND created_at >= $2
 	`
 	if err := scanSingleRow(
 		ctx,

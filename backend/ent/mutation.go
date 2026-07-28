@@ -2304,6 +2304,8 @@ type AccountMutation struct {
 	addpriority                 *int
 	rate_multiplier             *float64
 	addrate_multiplier          *float64
+	oauth_settlement_cost       *float64
+	addoauth_settlement_cost    *float64
 	status                      *string
 	error_message               *string
 	last_used_at                *time.Time
@@ -3141,6 +3143,76 @@ func (m *AccountMutation) AddedRateMultiplier() (r float64, exists bool) {
 func (m *AccountMutation) ResetRateMultiplier() {
 	m.rate_multiplier = nil
 	m.addrate_multiplier = nil
+}
+
+// SetOauthSettlementCost sets the "oauth_settlement_cost" field.
+func (m *AccountMutation) SetOauthSettlementCost(f float64) {
+	m.oauth_settlement_cost = &f
+	m.addoauth_settlement_cost = nil
+}
+
+// OauthSettlementCost returns the value of the "oauth_settlement_cost" field in the mutation.
+func (m *AccountMutation) OauthSettlementCost() (r float64, exists bool) {
+	v := m.oauth_settlement_cost
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOauthSettlementCost returns the old "oauth_settlement_cost" field's value of the Account entity.
+// If the Account object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountMutation) OldOauthSettlementCost(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOauthSettlementCost is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOauthSettlementCost requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOauthSettlementCost: %w", err)
+	}
+	return oldValue.OauthSettlementCost, nil
+}
+
+// AddOauthSettlementCost adds f to the "oauth_settlement_cost" field.
+func (m *AccountMutation) AddOauthSettlementCost(f float64) {
+	if m.addoauth_settlement_cost != nil {
+		*m.addoauth_settlement_cost += f
+	} else {
+		m.addoauth_settlement_cost = &f
+	}
+}
+
+// AddedOauthSettlementCost returns the value that was added to the "oauth_settlement_cost" field in this mutation.
+func (m *AccountMutation) AddedOauthSettlementCost() (r float64, exists bool) {
+	v := m.addoauth_settlement_cost
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearOauthSettlementCost clears the value of the "oauth_settlement_cost" field.
+func (m *AccountMutation) ClearOauthSettlementCost() {
+	m.oauth_settlement_cost = nil
+	m.addoauth_settlement_cost = nil
+	m.clearedFields[account.FieldOauthSettlementCost] = struct{}{}
+}
+
+// OauthSettlementCostCleared returns if the "oauth_settlement_cost" field was cleared in this mutation.
+func (m *AccountMutation) OauthSettlementCostCleared() bool {
+	_, ok := m.clearedFields[account.FieldOauthSettlementCost]
+	return ok
+}
+
+// ResetOauthSettlementCost resets all changes to the "oauth_settlement_cost" field.
+func (m *AccountMutation) ResetOauthSettlementCost() {
+	m.oauth_settlement_cost = nil
+	m.addoauth_settlement_cost = nil
+	delete(m.clearedFields, account.FieldOauthSettlementCost)
 }
 
 // SetStatus sets the "status" field.
@@ -4138,7 +4210,7 @@ func (m *AccountMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AccountMutation) Fields() []string {
-	fields := make([]string, 0, 31)
+	fields := make([]string, 0, 32)
 	if m.created_at != nil {
 		fields = append(fields, account.FieldCreatedAt)
 	}
@@ -4183,6 +4255,9 @@ func (m *AccountMutation) Fields() []string {
 	}
 	if m.rate_multiplier != nil {
 		fields = append(fields, account.FieldRateMultiplier)
+	}
+	if m.oauth_settlement_cost != nil {
+		fields = append(fields, account.FieldOauthSettlementCost)
 	}
 	if m.status != nil {
 		fields = append(fields, account.FieldStatus)
@@ -4270,6 +4345,8 @@ func (m *AccountMutation) Field(name string) (ent.Value, bool) {
 		return m.Priority()
 	case account.FieldRateMultiplier:
 		return m.RateMultiplier()
+	case account.FieldOauthSettlementCost:
+		return m.OauthSettlementCost()
 	case account.FieldStatus:
 		return m.Status()
 	case account.FieldErrorMessage:
@@ -4341,6 +4418,8 @@ func (m *AccountMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldPriority(ctx)
 	case account.FieldRateMultiplier:
 		return m.OldRateMultiplier(ctx)
+	case account.FieldOauthSettlementCost:
+		return m.OldOauthSettlementCost(ctx)
 	case account.FieldStatus:
 		return m.OldStatus(ctx)
 	case account.FieldErrorMessage:
@@ -4487,6 +4566,13 @@ func (m *AccountMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRateMultiplier(v)
 		return nil
+	case account.FieldOauthSettlementCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOauthSettlementCost(v)
+		return nil
 	case account.FieldStatus:
 		v, ok := value.(string)
 		if !ok {
@@ -4622,6 +4708,9 @@ func (m *AccountMutation) AddedFields() []string {
 	if m.addrate_multiplier != nil {
 		fields = append(fields, account.FieldRateMultiplier)
 	}
+	if m.addoauth_settlement_cost != nil {
+		fields = append(fields, account.FieldOauthSettlementCost)
+	}
 	return fields
 }
 
@@ -4640,6 +4729,8 @@ func (m *AccountMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedPriority()
 	case account.FieldRateMultiplier:
 		return m.AddedRateMultiplier()
+	case account.FieldOauthSettlementCost:
+		return m.AddedOauthSettlementCost()
 	}
 	return nil, false
 }
@@ -4684,6 +4775,13 @@ func (m *AccountMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddRateMultiplier(v)
 		return nil
+	case account.FieldOauthSettlementCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOauthSettlementCost(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Account numeric field %s", name)
 }
@@ -4706,6 +4804,9 @@ func (m *AccountMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(account.FieldLoadFactor) {
 		fields = append(fields, account.FieldLoadFactor)
+	}
+	if m.FieldCleared(account.FieldOauthSettlementCost) {
+		fields = append(fields, account.FieldOauthSettlementCost)
 	}
 	if m.FieldCleared(account.FieldErrorMessage) {
 		fields = append(fields, account.FieldErrorMessage)
@@ -4771,6 +4872,9 @@ func (m *AccountMutation) ClearField(name string) error {
 		return nil
 	case account.FieldLoadFactor:
 		m.ClearLoadFactor()
+		return nil
+	case account.FieldOauthSettlementCost:
+		m.ClearOauthSettlementCost()
 		return nil
 	case account.FieldErrorMessage:
 		m.ClearErrorMessage()
@@ -4860,6 +4964,9 @@ func (m *AccountMutation) ResetField(name string) error {
 		return nil
 	case account.FieldRateMultiplier:
 		m.ResetRateMultiplier()
+		return nil
+	case account.FieldOauthSettlementCost:
+		m.ResetOauthSettlementCost()
 		return nil
 	case account.FieldStatus:
 		m.ResetStatus()
@@ -43126,6 +43233,7 @@ type UsageLogMutation struct {
 	id                           *int64
 	request_id                   *string
 	model                        *string
+	record_type                  *string
 	requested_model              *string
 	upstream_model               *string
 	channel_id                   *int64
@@ -43352,7 +43460,7 @@ func (m *UsageLogMutation) APIKeyID() (r int64, exists bool) {
 // OldAPIKeyID returns the old "api_key_id" field's value of the UsageLog entity.
 // If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UsageLogMutation) OldAPIKeyID(ctx context.Context) (v int64, err error) {
+func (m *UsageLogMutation) OldAPIKeyID(ctx context.Context) (v *int64, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldAPIKeyID is only allowed on UpdateOne operations")
 	}
@@ -43366,9 +43474,22 @@ func (m *UsageLogMutation) OldAPIKeyID(ctx context.Context) (v int64, err error)
 	return oldValue.APIKeyID, nil
 }
 
+// ClearAPIKeyID clears the value of the "api_key_id" field.
+func (m *UsageLogMutation) ClearAPIKeyID() {
+	m.api_key = nil
+	m.clearedFields[usagelog.FieldAPIKeyID] = struct{}{}
+}
+
+// APIKeyIDCleared returns if the "api_key_id" field was cleared in this mutation.
+func (m *UsageLogMutation) APIKeyIDCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldAPIKeyID]
+	return ok
+}
+
 // ResetAPIKeyID resets all changes to the "api_key_id" field.
 func (m *UsageLogMutation) ResetAPIKeyID() {
 	m.api_key = nil
+	delete(m.clearedFields, usagelog.FieldAPIKeyID)
 }
 
 // SetAccountID sets the "account_id" field.
@@ -43477,6 +43598,42 @@ func (m *UsageLogMutation) OldModel(ctx context.Context) (v string, err error) {
 // ResetModel resets all changes to the "model" field.
 func (m *UsageLogMutation) ResetModel() {
 	m.model = nil
+}
+
+// SetRecordType sets the "record_type" field.
+func (m *UsageLogMutation) SetRecordType(s string) {
+	m.record_type = &s
+}
+
+// RecordType returns the value of the "record_type" field in the mutation.
+func (m *UsageLogMutation) RecordType() (r string, exists bool) {
+	v := m.record_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRecordType returns the old "record_type" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldRecordType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRecordType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRecordType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRecordType: %w", err)
+	}
+	return oldValue.RecordType, nil
+}
+
+// ResetRecordType resets all changes to the "record_type" field.
+func (m *UsageLogMutation) ResetRecordType() {
+	m.record_type = nil
 }
 
 // SetRequestedModel sets the "requested_model" field.
@@ -45639,7 +45796,7 @@ func (m *UsageLogMutation) ClearAPIKey() {
 
 // APIKeyCleared reports if the "api_key" edge to the APIKey entity was cleared.
 func (m *UsageLogMutation) APIKeyCleared() bool {
-	return m.clearedapi_key
+	return m.APIKeyIDCleared() || m.clearedapi_key
 }
 
 // APIKeyIDs returns the "api_key" edge IDs in the mutation.
@@ -45773,7 +45930,7 @@ func (m *UsageLogMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UsageLogMutation) Fields() []string {
-	fields := make([]string, 0, 45)
+	fields := make([]string, 0, 46)
 	if m.user != nil {
 		fields = append(fields, usagelog.FieldUserID)
 	}
@@ -45788,6 +45945,9 @@ func (m *UsageLogMutation) Fields() []string {
 	}
 	if m.model != nil {
 		fields = append(fields, usagelog.FieldModel)
+	}
+	if m.record_type != nil {
+		fields = append(fields, usagelog.FieldRecordType)
 	}
 	if m.requested_model != nil {
 		fields = append(fields, usagelog.FieldRequestedModel)
@@ -45927,6 +46087,8 @@ func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
 		return m.RequestID()
 	case usagelog.FieldModel:
 		return m.Model()
+	case usagelog.FieldRecordType:
+		return m.RecordType()
 	case usagelog.FieldRequestedModel:
 		return m.RequestedModel()
 	case usagelog.FieldUpstreamModel:
@@ -46026,6 +46188,8 @@ func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldRequestID(ctx)
 	case usagelog.FieldModel:
 		return m.OldModel(ctx)
+	case usagelog.FieldRecordType:
+		return m.OldRecordType(ctx)
 	case usagelog.FieldRequestedModel:
 		return m.OldRequestedModel(ctx)
 	case usagelog.FieldUpstreamModel:
@@ -46149,6 +46313,13 @@ func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetModel(v)
+		return nil
+	case usagelog.FieldRecordType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRecordType(v)
 		return nil
 	case usagelog.FieldRequestedModel:
 		v, ok := value.(string)
@@ -46715,6 +46886,9 @@ func (m *UsageLogMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *UsageLogMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(usagelog.FieldAPIKeyID) {
+		fields = append(fields, usagelog.FieldAPIKeyID)
+	}
 	if m.FieldCleared(usagelog.FieldRequestedModel) {
 		fields = append(fields, usagelog.FieldRequestedModel)
 	}
@@ -46789,6 +46963,9 @@ func (m *UsageLogMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *UsageLogMutation) ClearField(name string) error {
 	switch name {
+	case usagelog.FieldAPIKeyID:
+		m.ClearAPIKeyID()
+		return nil
 	case usagelog.FieldRequestedModel:
 		m.ClearRequestedModel()
 		return nil
@@ -46871,6 +47048,9 @@ func (m *UsageLogMutation) ResetField(name string) error {
 		return nil
 	case usagelog.FieldModel:
 		m.ResetModel()
+		return nil
+	case usagelog.FieldRecordType:
+		m.ResetRecordType()
 		return nil
 	case usagelog.FieldRequestedModel:
 		m.ResetRequestedModel()
@@ -47174,6 +47354,7 @@ type UserMutation struct {
 	balance_notify_threshold      *float64
 	addbalance_notify_threshold   *float64
 	balance_notify_extra_emails   *string
+	model_routing_notice_mode     *string
 	total_recharged               *float64
 	addtotal_recharged            *float64
 	rpm_limit                     *int
@@ -48272,6 +48453,42 @@ func (m *UserMutation) ResetBalanceNotifyExtraEmails() {
 	m.balance_notify_extra_emails = nil
 }
 
+// SetModelRoutingNoticeMode sets the "model_routing_notice_mode" field.
+func (m *UserMutation) SetModelRoutingNoticeMode(s string) {
+	m.model_routing_notice_mode = &s
+}
+
+// ModelRoutingNoticeMode returns the value of the "model_routing_notice_mode" field in the mutation.
+func (m *UserMutation) ModelRoutingNoticeMode() (r string, exists bool) {
+	v := m.model_routing_notice_mode
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldModelRoutingNoticeMode returns the old "model_routing_notice_mode" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldModelRoutingNoticeMode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModelRoutingNoticeMode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModelRoutingNoticeMode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModelRoutingNoticeMode: %w", err)
+	}
+	return oldValue.ModelRoutingNoticeMode, nil
+}
+
+// ResetModelRoutingNoticeMode resets all changes to the "model_routing_notice_mode" field.
+func (m *UserMutation) ResetModelRoutingNoticeMode() {
+	m.model_routing_notice_mode = nil
+}
+
 // SetTotalRecharged sets the "total_recharged" field.
 func (m *UserMutation) SetTotalRecharged(f float64) {
 	m.total_recharged = &f
@@ -49120,7 +49337,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 24)
+	fields := make([]string, 0, 25)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -49187,6 +49404,9 @@ func (m *UserMutation) Fields() []string {
 	if m.balance_notify_extra_emails != nil {
 		fields = append(fields, user.FieldBalanceNotifyExtraEmails)
 	}
+	if m.model_routing_notice_mode != nil {
+		fields = append(fields, user.FieldModelRoutingNoticeMode)
+	}
 	if m.total_recharged != nil {
 		fields = append(fields, user.FieldTotalRecharged)
 	}
@@ -49245,6 +49465,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.BalanceNotifyThreshold()
 	case user.FieldBalanceNotifyExtraEmails:
 		return m.BalanceNotifyExtraEmails()
+	case user.FieldModelRoutingNoticeMode:
+		return m.ModelRoutingNoticeMode()
 	case user.FieldTotalRecharged:
 		return m.TotalRecharged()
 	case user.FieldRpmLimit:
@@ -49302,6 +49524,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldBalanceNotifyThreshold(ctx)
 	case user.FieldBalanceNotifyExtraEmails:
 		return m.OldBalanceNotifyExtraEmails(ctx)
+	case user.FieldModelRoutingNoticeMode:
+		return m.OldModelRoutingNoticeMode(ctx)
 	case user.FieldTotalRecharged:
 		return m.OldTotalRecharged(ctx)
 	case user.FieldRpmLimit:
@@ -49468,6 +49692,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBalanceNotifyExtraEmails(v)
+		return nil
+	case user.FieldModelRoutingNoticeMode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetModelRoutingNoticeMode(v)
 		return nil
 	case user.FieldTotalRecharged:
 		v, ok := value.(float64)
@@ -49711,6 +49942,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldBalanceNotifyExtraEmails:
 		m.ResetBalanceNotifyExtraEmails()
+		return nil
+	case user.FieldModelRoutingNoticeMode:
+		m.ResetModelRoutingNoticeMode()
 		return nil
 	case user.FieldTotalRecharged:
 		m.ResetTotalRecharged()

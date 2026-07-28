@@ -165,6 +165,11 @@ func BalanceNotifyExtraEmails(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldBalanceNotifyExtraEmails, v))
 }
 
+// ModelRoutingNoticeMode applies equality check predicate on the "model_routing_notice_mode" field. It's identical to ModelRoutingNoticeModeEQ.
+func ModelRoutingNoticeMode(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldModelRoutingNoticeMode, v))
+}
+
 // TotalRecharged applies equality check predicate on the "total_recharged" field. It's identical to TotalRechargedEQ.
 func TotalRecharged(v float64) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldTotalRecharged, v))
@@ -1303,6 +1308,71 @@ func BalanceNotifyExtraEmailsEqualFold(v string) predicate.User {
 // BalanceNotifyExtraEmailsContainsFold applies the ContainsFold predicate on the "balance_notify_extra_emails" field.
 func BalanceNotifyExtraEmailsContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldBalanceNotifyExtraEmails, v))
+}
+
+// ModelRoutingNoticeModeEQ applies the EQ predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldModelRoutingNoticeMode, v))
+}
+
+// ModelRoutingNoticeModeNEQ applies the NEQ predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldModelRoutingNoticeMode, v))
+}
+
+// ModelRoutingNoticeModeIn applies the In predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldModelRoutingNoticeMode, vs...))
+}
+
+// ModelRoutingNoticeModeNotIn applies the NotIn predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldModelRoutingNoticeMode, vs...))
+}
+
+// ModelRoutingNoticeModeGT applies the GT predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldModelRoutingNoticeMode, v))
+}
+
+// ModelRoutingNoticeModeGTE applies the GTE predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldModelRoutingNoticeMode, v))
+}
+
+// ModelRoutingNoticeModeLT applies the LT predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldModelRoutingNoticeMode, v))
+}
+
+// ModelRoutingNoticeModeLTE applies the LTE predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldModelRoutingNoticeMode, v))
+}
+
+// ModelRoutingNoticeModeContains applies the Contains predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldModelRoutingNoticeMode, v))
+}
+
+// ModelRoutingNoticeModeHasPrefix applies the HasPrefix predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldModelRoutingNoticeMode, v))
+}
+
+// ModelRoutingNoticeModeHasSuffix applies the HasSuffix predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldModelRoutingNoticeMode, v))
+}
+
+// ModelRoutingNoticeModeEqualFold applies the EqualFold predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldModelRoutingNoticeMode, v))
+}
+
+// ModelRoutingNoticeModeContainsFold applies the ContainsFold predicate on the "model_routing_notice_mode" field.
+func ModelRoutingNoticeModeContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldModelRoutingNoticeMode, v))
 }
 
 // TotalRechargedEQ applies the EQ predicate on the "total_recharged" field.

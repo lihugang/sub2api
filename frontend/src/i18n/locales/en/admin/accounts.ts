@@ -822,6 +822,7 @@ export default {
       priorityHint: 'Lower value accounts are used first',
       billingRateMultiplier: 'Billing Rate Multiplier',
       billingRateMultiplierHint: '0 = free, affects account billing only',
+      oauthSettlementCost: 'OAuth Account Settlement Cost (USD)',
       perRequestPricing: {
         title: 'Enable Per-Request Pricing',
         hint: 'Records fixed account upstream cost by final upstream model. It does not affect user balance or channel billing. Models without a price cannot use this account.',

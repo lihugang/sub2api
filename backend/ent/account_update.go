@@ -268,6 +268,33 @@ func (_u *AccountUpdate) AddRateMultiplier(v float64) *AccountUpdate {
 	return _u
 }
 
+// SetOauthSettlementCost sets the "oauth_settlement_cost" field.
+func (_u *AccountUpdate) SetOauthSettlementCost(v float64) *AccountUpdate {
+	_u.mutation.ResetOauthSettlementCost()
+	_u.mutation.SetOauthSettlementCost(v)
+	return _u
+}
+
+// SetNillableOauthSettlementCost sets the "oauth_settlement_cost" field if the given value is not nil.
+func (_u *AccountUpdate) SetNillableOauthSettlementCost(v *float64) *AccountUpdate {
+	if v != nil {
+		_u.SetOauthSettlementCost(*v)
+	}
+	return _u
+}
+
+// AddOauthSettlementCost adds value to the "oauth_settlement_cost" field.
+func (_u *AccountUpdate) AddOauthSettlementCost(v float64) *AccountUpdate {
+	_u.mutation.AddOauthSettlementCost(v)
+	return _u
+}
+
+// ClearOauthSettlementCost clears the value of the "oauth_settlement_cost" field.
+func (_u *AccountUpdate) ClearOauthSettlementCost() *AccountUpdate {
+	_u.mutation.ClearOauthSettlementCost()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *AccountUpdate) SetStatus(v string) *AccountUpdate {
 	_u.mutation.SetStatus(v)
@@ -868,6 +895,15 @@ func (_u *AccountUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.AddedRateMultiplier(); ok {
 		_spec.AddField(account.FieldRateMultiplier, field.TypeFloat64, value)
 	}
+	if value, ok := _u.mutation.OauthSettlementCost(); ok {
+		_spec.SetField(account.FieldOauthSettlementCost, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedOauthSettlementCost(); ok {
+		_spec.AddField(account.FieldOauthSettlementCost, field.TypeFloat64, value)
+	}
+	if _u.mutation.OauthSettlementCostCleared() {
+		_spec.ClearField(account.FieldOauthSettlementCost, field.TypeFloat64)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(account.FieldStatus, field.TypeString, value)
 	}
@@ -1405,6 +1441,33 @@ func (_u *AccountUpdateOne) SetNillableRateMultiplier(v *float64) *AccountUpdate
 // AddRateMultiplier adds value to the "rate_multiplier" field.
 func (_u *AccountUpdateOne) AddRateMultiplier(v float64) *AccountUpdateOne {
 	_u.mutation.AddRateMultiplier(v)
+	return _u
+}
+
+// SetOauthSettlementCost sets the "oauth_settlement_cost" field.
+func (_u *AccountUpdateOne) SetOauthSettlementCost(v float64) *AccountUpdateOne {
+	_u.mutation.ResetOauthSettlementCost()
+	_u.mutation.SetOauthSettlementCost(v)
+	return _u
+}
+
+// SetNillableOauthSettlementCost sets the "oauth_settlement_cost" field if the given value is not nil.
+func (_u *AccountUpdateOne) SetNillableOauthSettlementCost(v *float64) *AccountUpdateOne {
+	if v != nil {
+		_u.SetOauthSettlementCost(*v)
+	}
+	return _u
+}
+
+// AddOauthSettlementCost adds value to the "oauth_settlement_cost" field.
+func (_u *AccountUpdateOne) AddOauthSettlementCost(v float64) *AccountUpdateOne {
+	_u.mutation.AddOauthSettlementCost(v)
+	return _u
+}
+
+// ClearOauthSettlementCost clears the value of the "oauth_settlement_cost" field.
+func (_u *AccountUpdateOne) ClearOauthSettlementCost() *AccountUpdateOne {
+	_u.mutation.ClearOauthSettlementCost()
 	return _u
 }
 
@@ -2037,6 +2100,15 @@ func (_u *AccountUpdateOne) sqlSave(ctx context.Context) (_node *Account, err er
 	}
 	if value, ok := _u.mutation.AddedRateMultiplier(); ok {
 		_spec.AddField(account.FieldRateMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.OauthSettlementCost(); ok {
+		_spec.SetField(account.FieldOauthSettlementCost, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedOauthSettlementCost(); ok {
+		_spec.AddField(account.FieldOauthSettlementCost, field.TypeFloat64, value)
+	}
+	if _u.mutation.OauthSettlementCostCleared() {
+		_spec.ClearField(account.FieldOauthSettlementCost, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(account.FieldStatus, field.TypeString, value)

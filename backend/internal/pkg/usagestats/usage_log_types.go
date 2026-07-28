@@ -282,6 +282,8 @@ type UsageLogFilters struct {
 	EndTime           *time.Time
 	// ExactTotal requests exact COUNT(*) for pagination. Default false for fast large-table paging.
 	ExactTotal bool
+	// IncludeInternal includes admin-only bookkeeping rows such as OAuth account settlements.
+	IncludeInternal bool
 }
 
 // UsageStats represents usage statistics

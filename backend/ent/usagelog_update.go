@@ -60,6 +60,12 @@ func (_u *UsageLogUpdate) SetNillableAPIKeyID(v *int64) *UsageLogUpdate {
 	return _u
 }
 
+// ClearAPIKeyID clears the value of the "api_key_id" field.
+func (_u *UsageLogUpdate) ClearAPIKeyID() *UsageLogUpdate {
+	_u.mutation.ClearAPIKeyID()
+	return _u
+}
+
 // SetAccountID sets the "account_id" field.
 func (_u *UsageLogUpdate) SetAccountID(v int64) *UsageLogUpdate {
 	_u.mutation.SetAccountID(v)
@@ -98,6 +104,20 @@ func (_u *UsageLogUpdate) SetModel(v string) *UsageLogUpdate {
 func (_u *UsageLogUpdate) SetNillableModel(v *string) *UsageLogUpdate {
 	if v != nil {
 		_u.SetModel(*v)
+	}
+	return _u
+}
+
+// SetRecordType sets the "record_type" field.
+func (_u *UsageLogUpdate) SetRecordType(v string) *UsageLogUpdate {
+	_u.mutation.SetRecordType(v)
+	return _u
+}
+
+// SetNillableRecordType sets the "record_type" field if the given value is not nil.
+func (_u *UsageLogUpdate) SetNillableRecordType(v *string) *UsageLogUpdate {
+	if v != nil {
+		_u.SetRecordType(*v)
 	}
 	return _u
 }
@@ -1006,6 +1026,11 @@ func (_u *UsageLogUpdate) check() error {
 			return &ValidationError{Name: "model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.model": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.RecordType(); ok {
+		if err := usagelog.RecordTypeValidator(v); err != nil {
+			return &ValidationError{Name: "record_type", err: fmt.Errorf(`ent: validator failed for field "UsageLog.record_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.RequestedModel(); ok {
 		if err := usagelog.RequestedModelValidator(v); err != nil {
 			return &ValidationError{Name: "requested_model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.requested_model": %w`, err)}
@@ -1069,9 +1094,6 @@ func (_u *UsageLogUpdate) check() error {
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "UsageLog.user"`)
 	}
-	if _u.mutation.APIKeyCleared() && len(_u.mutation.APIKeyIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "UsageLog.api_key"`)
-	}
 	if _u.mutation.AccountCleared() && len(_u.mutation.AccountIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "UsageLog.account"`)
 	}
@@ -1095,6 +1117,9 @@ func (_u *UsageLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Model(); ok {
 		_spec.SetField(usagelog.FieldModel, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.RecordType(); ok {
+		_spec.SetField(usagelog.FieldRecordType, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.RequestedModel(); ok {
 		_spec.SetField(usagelog.FieldRequestedModel, field.TypeString, value)
@@ -1517,6 +1542,12 @@ func (_u *UsageLogUpdateOne) SetNillableAPIKeyID(v *int64) *UsageLogUpdateOne {
 	return _u
 }
 
+// ClearAPIKeyID clears the value of the "api_key_id" field.
+func (_u *UsageLogUpdateOne) ClearAPIKeyID() *UsageLogUpdateOne {
+	_u.mutation.ClearAPIKeyID()
+	return _u
+}
+
 // SetAccountID sets the "account_id" field.
 func (_u *UsageLogUpdateOne) SetAccountID(v int64) *UsageLogUpdateOne {
 	_u.mutation.SetAccountID(v)
@@ -1555,6 +1586,20 @@ func (_u *UsageLogUpdateOne) SetModel(v string) *UsageLogUpdateOne {
 func (_u *UsageLogUpdateOne) SetNillableModel(v *string) *UsageLogUpdateOne {
 	if v != nil {
 		_u.SetModel(*v)
+	}
+	return _u
+}
+
+// SetRecordType sets the "record_type" field.
+func (_u *UsageLogUpdateOne) SetRecordType(v string) *UsageLogUpdateOne {
+	_u.mutation.SetRecordType(v)
+	return _u
+}
+
+// SetNillableRecordType sets the "record_type" field if the given value is not nil.
+func (_u *UsageLogUpdateOne) SetNillableRecordType(v *string) *UsageLogUpdateOne {
+	if v != nil {
+		_u.SetRecordType(*v)
 	}
 	return _u
 }
@@ -2476,6 +2521,11 @@ func (_u *UsageLogUpdateOne) check() error {
 			return &ValidationError{Name: "model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.model": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.RecordType(); ok {
+		if err := usagelog.RecordTypeValidator(v); err != nil {
+			return &ValidationError{Name: "record_type", err: fmt.Errorf(`ent: validator failed for field "UsageLog.record_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.RequestedModel(); ok {
 		if err := usagelog.RequestedModelValidator(v); err != nil {
 			return &ValidationError{Name: "requested_model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.requested_model": %w`, err)}
@@ -2539,9 +2589,6 @@ func (_u *UsageLogUpdateOne) check() error {
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "UsageLog.user"`)
 	}
-	if _u.mutation.APIKeyCleared() && len(_u.mutation.APIKeyIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "UsageLog.api_key"`)
-	}
 	if _u.mutation.AccountCleared() && len(_u.mutation.AccountIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "UsageLog.account"`)
 	}
@@ -2582,6 +2629,9 @@ func (_u *UsageLogUpdateOne) sqlSave(ctx context.Context) (_node *UsageLog, err 
 	}
 	if value, ok := _u.mutation.Model(); ok {
 		_spec.SetField(usagelog.FieldModel, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.RecordType(); ok {
+		_spec.SetField(usagelog.FieldRecordType, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.RequestedModel(); ok {
 		_spec.SetField(usagelog.FieldRequestedModel, field.TypeString, value)

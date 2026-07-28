@@ -187,6 +187,7 @@ func (h *UsageHandler) List(c *gin.Context) {
 		StartTime:         startTime,
 		EndTime:           endTime,
 		ExactTotal:        exactTotal,
+		IncludeInternal:   true,
 	}
 
 	records, result, err := h.usageService.ListWithFilters(c.Request.Context(), params, filters)

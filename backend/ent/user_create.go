@@ -326,6 +326,20 @@ func (_c *UserCreate) SetNillableBalanceNotifyExtraEmails(v *string) *UserCreate
 	return _c
 }
 
+// SetModelRoutingNoticeMode sets the "model_routing_notice_mode" field.
+func (_c *UserCreate) SetModelRoutingNoticeMode(v string) *UserCreate {
+	_c.mutation.SetModelRoutingNoticeMode(v)
+	return _c
+}
+
+// SetNillableModelRoutingNoticeMode sets the "model_routing_notice_mode" field if the given value is not nil.
+func (_c *UserCreate) SetNillableModelRoutingNoticeMode(v *string) *UserCreate {
+	if v != nil {
+		_c.SetModelRoutingNoticeMode(*v)
+	}
+	return _c
+}
+
 // SetTotalRecharged sets the "total_recharged" field.
 func (_c *UserCreate) SetTotalRecharged(v float64) *UserCreate {
 	_c.mutation.SetTotalRecharged(v)
@@ -648,6 +662,10 @@ func (_c *UserCreate) defaults() error {
 		v := user.DefaultBalanceNotifyExtraEmails
 		_c.mutation.SetBalanceNotifyExtraEmails(v)
 	}
+	if _, ok := _c.mutation.ModelRoutingNoticeMode(); !ok {
+		v := user.DefaultModelRoutingNoticeMode
+		_c.mutation.SetModelRoutingNoticeMode(v)
+	}
 	if _, ok := _c.mutation.TotalRecharged(); !ok {
 		v := user.DefaultTotalRecharged
 		_c.mutation.SetTotalRecharged(v)
@@ -738,6 +756,14 @@ func (_c *UserCreate) check() error {
 	}
 	if _, ok := _c.mutation.BalanceNotifyExtraEmails(); !ok {
 		return &ValidationError{Name: "balance_notify_extra_emails", err: errors.New(`ent: missing required field "User.balance_notify_extra_emails"`)}
+	}
+	if _, ok := _c.mutation.ModelRoutingNoticeMode(); !ok {
+		return &ValidationError{Name: "model_routing_notice_mode", err: errors.New(`ent: missing required field "User.model_routing_notice_mode"`)}
+	}
+	if v, ok := _c.mutation.ModelRoutingNoticeMode(); ok {
+		if err := user.ModelRoutingNoticeModeValidator(v); err != nil {
+			return &ValidationError{Name: "model_routing_notice_mode", err: fmt.Errorf(`ent: validator failed for field "User.model_routing_notice_mode": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.TotalRecharged(); !ok {
 		return &ValidationError{Name: "total_recharged", err: errors.New(`ent: missing required field "User.total_recharged"`)}
@@ -859,6 +885,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.BalanceNotifyExtraEmails(); ok {
 		_spec.SetField(user.FieldBalanceNotifyExtraEmails, field.TypeString, value)
 		_node.BalanceNotifyExtraEmails = value
+	}
+	if value, ok := _c.mutation.ModelRoutingNoticeMode(); ok {
+		_spec.SetField(user.FieldModelRoutingNoticeMode, field.TypeString, value)
+		_node.ModelRoutingNoticeMode = value
 	}
 	if value, ok := _c.mutation.TotalRecharged(); ok {
 		_spec.SetField(user.FieldTotalRecharged, field.TypeFloat64, value)
@@ -1444,6 +1474,18 @@ func (u *UserUpsert) UpdateBalanceNotifyExtraEmails() *UserUpsert {
 	return u
 }
 
+// SetModelRoutingNoticeMode sets the "model_routing_notice_mode" field.
+func (u *UserUpsert) SetModelRoutingNoticeMode(v string) *UserUpsert {
+	u.Set(user.FieldModelRoutingNoticeMode, v)
+	return u
+}
+
+// UpdateModelRoutingNoticeMode sets the "model_routing_notice_mode" field to the value that was provided on create.
+func (u *UserUpsert) UpdateModelRoutingNoticeMode() *UserUpsert {
+	u.SetExcluded(user.FieldModelRoutingNoticeMode)
+	return u
+}
+
 // SetTotalRecharged sets the "total_recharged" field.
 func (u *UserUpsert) SetTotalRecharged(v float64) *UserUpsert {
 	u.Set(user.FieldTotalRecharged, v)
@@ -1886,6 +1928,20 @@ func (u *UserUpsertOne) SetBalanceNotifyExtraEmails(v string) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateBalanceNotifyExtraEmails() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateBalanceNotifyExtraEmails()
+	})
+}
+
+// SetModelRoutingNoticeMode sets the "model_routing_notice_mode" field.
+func (u *UserUpsertOne) SetModelRoutingNoticeMode(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetModelRoutingNoticeMode(v)
+	})
+}
+
+// UpdateModelRoutingNoticeMode sets the "model_routing_notice_mode" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateModelRoutingNoticeMode() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateModelRoutingNoticeMode()
 	})
 }
 
@@ -2503,6 +2559,20 @@ func (u *UserUpsertBulk) SetBalanceNotifyExtraEmails(v string) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateBalanceNotifyExtraEmails() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateBalanceNotifyExtraEmails()
+	})
+}
+
+// SetModelRoutingNoticeMode sets the "model_routing_notice_mode" field.
+func (u *UserUpsertBulk) SetModelRoutingNoticeMode(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetModelRoutingNoticeMode(v)
+	})
+}
+
+// UpdateModelRoutingNoticeMode sets the "model_routing_notice_mode" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateModelRoutingNoticeMode() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateModelRoutingNoticeMode()
 	})
 }
 

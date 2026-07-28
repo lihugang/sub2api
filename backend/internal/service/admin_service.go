@@ -330,22 +330,22 @@ type UpdateGroupInput struct {
 }
 
 type CreateAccountInput struct {
-	Name               string
-	Notes              *string
-	Platform           string
-	Type               string
-	Credentials        map[string]any
-	Extra              map[string]any
-	ProxyID            *int64
-	Concurrency        int
-	Priority           int
-	RateMultiplier     *float64 // 账号计费倍率（>=0，允许 0）
+	Name                string
+	Notes               *string
+	Platform            string
+	Type                string
+	Credentials         map[string]any
+	Extra               map[string]any
+	ProxyID             *int64
+	Concurrency         int
+	Priority            int
+	RateMultiplier      *float64 // 账号计费倍率（>=0，允许 0）
 	OAuthSettlementCost *float64 // OAuth 删除时一次性分摊的账号成本（USD）
-	LoadFactor         *int
-	GroupIDs           []int64
-	ExpiresAt          *int64
-	AutoPauseOnExpired *bool
-	ProbeEnabled       *bool
+	LoadFactor          *int
+	GroupIDs            []int64
+	ExpiresAt           *int64
+	AutoPauseOnExpired  *bool
+	ProbeEnabled        *bool
 	// SkipDefaultGroupBind prevents auto-binding to platform default group when GroupIDs is empty.
 	SkipDefaultGroupBind bool
 	// SkipMixedChannelCheck skips the mixed channel risk check when binding groups.

@@ -877,6 +877,7 @@ export default {
       priorityHint: '优先级越小的账号优先使用',
       billingRateMultiplier: '账号计费倍率',
       billingRateMultiplierHint: '0 表示不计费，仅影响账号计费',
+      oauthSettlementCost: 'OAuth 账号结算成本 (USD)',
       perRequestPricing: {
         title: '启用按次计费',
         hint: '按最终上游模型记录账号单次成本；不影响用户余额和渠道计费。未配置价格的模型不能使用此账号。',

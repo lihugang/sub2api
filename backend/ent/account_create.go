@@ -195,6 +195,20 @@ func (_c *AccountCreate) SetNillableRateMultiplier(v *float64) *AccountCreate {
 	return _c
 }
 
+// SetOauthSettlementCost sets the "oauth_settlement_cost" field.
+func (_c *AccountCreate) SetOauthSettlementCost(v float64) *AccountCreate {
+	_c.mutation.SetOauthSettlementCost(v)
+	return _c
+}
+
+// SetNillableOauthSettlementCost sets the "oauth_settlement_cost" field if the given value is not nil.
+func (_c *AccountCreate) SetNillableOauthSettlementCost(v *float64) *AccountCreate {
+	if v != nil {
+		_c.SetOauthSettlementCost(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *AccountCreate) SetStatus(v string) *AccountCreate {
 	_c.mutation.SetStatus(v)
@@ -741,6 +755,10 @@ func (_c *AccountCreate) createSpec() (*Account, *sqlgraph.CreateSpec) {
 		_spec.SetField(account.FieldRateMultiplier, field.TypeFloat64, value)
 		_node.RateMultiplier = value
 	}
+	if value, ok := _c.mutation.OauthSettlementCost(); ok {
+		_spec.SetField(account.FieldOauthSettlementCost, field.TypeFloat64, value)
+		_node.OauthSettlementCost = &value
+	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(account.FieldStatus, field.TypeString, value)
 		_node.Status = value
@@ -1164,6 +1182,30 @@ func (u *AccountUpsert) UpdateRateMultiplier() *AccountUpsert {
 // AddRateMultiplier adds v to the "rate_multiplier" field.
 func (u *AccountUpsert) AddRateMultiplier(v float64) *AccountUpsert {
 	u.Add(account.FieldRateMultiplier, v)
+	return u
+}
+
+// SetOauthSettlementCost sets the "oauth_settlement_cost" field.
+func (u *AccountUpsert) SetOauthSettlementCost(v float64) *AccountUpsert {
+	u.Set(account.FieldOauthSettlementCost, v)
+	return u
+}
+
+// UpdateOauthSettlementCost sets the "oauth_settlement_cost" field to the value that was provided on create.
+func (u *AccountUpsert) UpdateOauthSettlementCost() *AccountUpsert {
+	u.SetExcluded(account.FieldOauthSettlementCost)
+	return u
+}
+
+// AddOauthSettlementCost adds v to the "oauth_settlement_cost" field.
+func (u *AccountUpsert) AddOauthSettlementCost(v float64) *AccountUpsert {
+	u.Add(account.FieldOauthSettlementCost, v)
+	return u
+}
+
+// ClearOauthSettlementCost clears the value of the "oauth_settlement_cost" field.
+func (u *AccountUpsert) ClearOauthSettlementCost() *AccountUpsert {
+	u.SetNull(account.FieldOauthSettlementCost)
 	return u
 }
 
@@ -1739,6 +1781,34 @@ func (u *AccountUpsertOne) AddRateMultiplier(v float64) *AccountUpsertOne {
 func (u *AccountUpsertOne) UpdateRateMultiplier() *AccountUpsertOne {
 	return u.Update(func(s *AccountUpsert) {
 		s.UpdateRateMultiplier()
+	})
+}
+
+// SetOauthSettlementCost sets the "oauth_settlement_cost" field.
+func (u *AccountUpsertOne) SetOauthSettlementCost(v float64) *AccountUpsertOne {
+	return u.Update(func(s *AccountUpsert) {
+		s.SetOauthSettlementCost(v)
+	})
+}
+
+// AddOauthSettlementCost adds v to the "oauth_settlement_cost" field.
+func (u *AccountUpsertOne) AddOauthSettlementCost(v float64) *AccountUpsertOne {
+	return u.Update(func(s *AccountUpsert) {
+		s.AddOauthSettlementCost(v)
+	})
+}
+
+// UpdateOauthSettlementCost sets the "oauth_settlement_cost" field to the value that was provided on create.
+func (u *AccountUpsertOne) UpdateOauthSettlementCost() *AccountUpsertOne {
+	return u.Update(func(s *AccountUpsert) {
+		s.UpdateOauthSettlementCost()
+	})
+}
+
+// ClearOauthSettlementCost clears the value of the "oauth_settlement_cost" field.
+func (u *AccountUpsertOne) ClearOauthSettlementCost() *AccountUpsertOne {
+	return u.Update(func(s *AccountUpsert) {
+		s.ClearOauthSettlementCost()
 	})
 }
 
@@ -2524,6 +2594,34 @@ func (u *AccountUpsertBulk) AddRateMultiplier(v float64) *AccountUpsertBulk {
 func (u *AccountUpsertBulk) UpdateRateMultiplier() *AccountUpsertBulk {
 	return u.Update(func(s *AccountUpsert) {
 		s.UpdateRateMultiplier()
+	})
+}
+
+// SetOauthSettlementCost sets the "oauth_settlement_cost" field.
+func (u *AccountUpsertBulk) SetOauthSettlementCost(v float64) *AccountUpsertBulk {
+	return u.Update(func(s *AccountUpsert) {
+		s.SetOauthSettlementCost(v)
+	})
+}
+
+// AddOauthSettlementCost adds v to the "oauth_settlement_cost" field.
+func (u *AccountUpsertBulk) AddOauthSettlementCost(v float64) *AccountUpsertBulk {
+	return u.Update(func(s *AccountUpsert) {
+		s.AddOauthSettlementCost(v)
+	})
+}
+
+// UpdateOauthSettlementCost sets the "oauth_settlement_cost" field to the value that was provided on create.
+func (u *AccountUpsertBulk) UpdateOauthSettlementCost() *AccountUpsertBulk {
+	return u.Update(func(s *AccountUpsert) {
+		s.UpdateOauthSettlementCost()
+	})
+}
+
+// ClearOauthSettlementCost clears the value of the "oauth_settlement_cost" field.
+func (u *AccountUpsertBulk) ClearOauthSettlementCost() *AccountUpsertBulk {
+	return u.Update(func(s *AccountUpsert) {
+		s.ClearOauthSettlementCost()
 	})
 }
 

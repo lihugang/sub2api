@@ -204,6 +204,7 @@ func (h *UsageHandler) parseUserUsageFilters(c *gin.Context, requireRange bool) 
 			Stream:            stream,
 			BillingType:       billingType,
 			BillingMode:       billingMode,
+			IncludeInternal:   false,
 			StartTime:         startPtr,
 			EndTime:           endPtr,
 		},

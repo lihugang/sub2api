@@ -390,6 +390,20 @@ func (_u *UserUpdate) SetNillableBalanceNotifyExtraEmails(v *string) *UserUpdate
 	return _u
 }
 
+// SetModelRoutingNoticeMode sets the "model_routing_notice_mode" field.
+func (_u *UserUpdate) SetModelRoutingNoticeMode(v string) *UserUpdate {
+	_u.mutation.SetModelRoutingNoticeMode(v)
+	return _u
+}
+
+// SetNillableModelRoutingNoticeMode sets the "model_routing_notice_mode" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableModelRoutingNoticeMode(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetModelRoutingNoticeMode(*v)
+	}
+	return _u
+}
+
 // SetTotalRecharged sets the "total_recharged" field.
 func (_u *UserUpdate) SetTotalRecharged(v float64) *UserUpdate {
 	_u.mutation.ResetTotalRecharged()
@@ -979,6 +993,11 @@ func (_u *UserUpdate) check() error {
 			return &ValidationError{Name: "signup_source", err: fmt.Errorf(`ent: validator failed for field "User.signup_source": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ModelRoutingNoticeMode(); ok {
+		if err := user.ModelRoutingNoticeModeValidator(v); err != nil {
+			return &ValidationError{Name: "model_routing_notice_mode", err: fmt.Errorf(`ent: validator failed for field "User.model_routing_notice_mode": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -1086,6 +1105,9 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.BalanceNotifyExtraEmails(); ok {
 		_spec.SetField(user.FieldBalanceNotifyExtraEmails, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ModelRoutingNoticeMode(); ok {
+		_spec.SetField(user.FieldModelRoutingNoticeMode, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.TotalRecharged(); ok {
 		_spec.SetField(user.FieldTotalRecharged, field.TypeFloat64, value)
@@ -2066,6 +2088,20 @@ func (_u *UserUpdateOne) SetNillableBalanceNotifyExtraEmails(v *string) *UserUpd
 	return _u
 }
 
+// SetModelRoutingNoticeMode sets the "model_routing_notice_mode" field.
+func (_u *UserUpdateOne) SetModelRoutingNoticeMode(v string) *UserUpdateOne {
+	_u.mutation.SetModelRoutingNoticeMode(v)
+	return _u
+}
+
+// SetNillableModelRoutingNoticeMode sets the "model_routing_notice_mode" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableModelRoutingNoticeMode(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetModelRoutingNoticeMode(*v)
+	}
+	return _u
+}
+
 // SetTotalRecharged sets the "total_recharged" field.
 func (_u *UserUpdateOne) SetTotalRecharged(v float64) *UserUpdateOne {
 	_u.mutation.ResetTotalRecharged()
@@ -2668,6 +2704,11 @@ func (_u *UserUpdateOne) check() error {
 			return &ValidationError{Name: "signup_source", err: fmt.Errorf(`ent: validator failed for field "User.signup_source": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ModelRoutingNoticeMode(); ok {
+		if err := user.ModelRoutingNoticeModeValidator(v); err != nil {
+			return &ValidationError{Name: "model_routing_notice_mode", err: fmt.Errorf(`ent: validator failed for field "User.model_routing_notice_mode": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -2792,6 +2833,9 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.BalanceNotifyExtraEmails(); ok {
 		_spec.SetField(user.FieldBalanceNotifyExtraEmails, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ModelRoutingNoticeMode(); ok {
+		_spec.SetField(user.FieldModelRoutingNoticeMode, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.TotalRecharged(); ok {
 		_spec.SetField(user.FieldTotalRecharged, field.TypeFloat64, value)

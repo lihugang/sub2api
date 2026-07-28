@@ -3,18 +3,20 @@ package service
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
-	"math"
 	"maps"
+	"math"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
@@ -1152,6 +1154,17 @@ func (s *adminServiceImpl) resolveBulkUpdateTargetIDs(ctx context.Context, filte
 }
 
 func (s *adminServiceImpl) DeleteAccount(ctx context.Context, id int64) error {
+	account, err := s.accountRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if account.Type == AccountTypeOAuth && account.ParentAccountID == nil && account.OAuthSettlementCost != nil && *account.OAuthSettlementCost > 0 {
+		return s.deleteOAuthAccountWithSettlement(ctx, id)
+	}
+	return s.deleteAccountCascade(ctx, id)
+}
+
+func (s *adminServiceImpl) deleteAccountCascade(ctx context.Context, id int64) error {
 	// 级联删除 spark 影子账号（先删影子，再删母账号）
 	shadows, err := s.accountRepo.ListShadowsByParent(ctx, id)
 	if err != nil {
@@ -1164,6 +1177,162 @@ func (s *adminServiceImpl) DeleteAccount(ctx context.Context, id int64) error {
 	}
 	if err := s.accountRepo.Delete(ctx, id); err != nil {
 		return err
+	}
+	return nil
+}
+
+const (
+	oauthSettlementRecordType = "oauth_settlement"
+	oauthSettlementModel      = "oauth-account-settlement"
+	oauthSettlementAdminUser  = int64(1)
+)
+
+type oauthSettlementShare struct {
+	userID int64
+	amount float64
+}
+
+func (s *adminServiceImpl) deleteOAuthAccountWithSettlement(ctx context.Context, accountID int64) error {
+	if s.entClient == nil {
+		return errors.New("oauth account settlement requires database transactions")
+	}
+	tx, err := s.entClient.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("begin oauth account settlement transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	txCtx := dbent.NewTxContext(ctx, tx)
+
+	cost, err := lockedOAuthSettlementCost(txCtx, tx.Client(), accountID)
+	if err != nil {
+		return err
+	}
+	if cost > 0 {
+		shares, err := oauthSettlementShares(txCtx, tx.Client(), accountID, cost)
+		if err != nil {
+			return err
+		}
+		if err := insertOAuthSettlementShares(txCtx, tx.Client(), accountID, shares); err != nil {
+			return err
+		}
+	}
+	if err := s.deleteAccountCascade(txCtx, accountID); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit oauth account settlement transaction: %w", err)
+	}
+	return nil
+}
+
+func lockedOAuthSettlementCost(ctx context.Context, client *dbent.Client, accountID int64) (float64, error) {
+	var (
+		accountType string
+		parentID    sql.NullInt64
+		cost        sql.NullFloat64
+	)
+	rows, err := client.QueryContext(ctx, `
+		SELECT type, parent_account_id, oauth_settlement_cost
+		FROM accounts
+		WHERE id = $1 AND deleted_at IS NULL
+		FOR UPDATE
+	`, accountID)
+	if err != nil {
+		return 0, fmt.Errorf("lock oauth account for settlement: %w", err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return 0, fmt.Errorf("lock oauth account for settlement: %w", err)
+		}
+		return 0, ErrAccountNotFound
+	}
+	if err := rows.Scan(&accountType, &parentID, &cost); err != nil {
+		return 0, fmt.Errorf("lock oauth account for settlement: %w", err)
+	}
+	if accountType != AccountTypeOAuth || parentID.Valid || !cost.Valid || cost.Float64 <= 0 {
+		return 0, nil
+	}
+	return cost.Float64, nil
+}
+
+func oauthSettlementShares(ctx context.Context, client *dbent.Client, accountID int64, totalCost float64) ([]oauthSettlementShare, error) {
+	rows, err := client.QueryContext(ctx, `
+		SELECT user_id, COALESCE(SUM(actual_cost), 0)
+		FROM usage_logs
+		WHERE account_id = $1 AND record_type = 'request' AND actual_cost > 0
+		GROUP BY user_id
+		ORDER BY user_id
+	`, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("load oauth settlement participants: %w", err)
+	}
+	defer rows.Close()
+
+	var shares []oauthSettlementShare
+	var denominator float64
+	for rows.Next() {
+		var share oauthSettlementShare
+		if err := rows.Scan(&share.userID, &share.amount); err != nil {
+			return nil, err
+		}
+		if share.amount > 0 {
+			shares = append(shares, share)
+			denominator += share.amount
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if denominator <= 0 || len(shares) == 0 {
+		rows, err := client.QueryContext(ctx, `SELECT 1 FROM users WHERE id = $1 AND deleted_at IS NULL`, oauthSettlementAdminUser)
+		if err != nil {
+			return nil, err
+		}
+		exists := rows.Next()
+		if err := rows.Err(); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		_ = rows.Close()
+		if !exists {
+			return nil, errors.New("oauth settlement fallback administrator user 1 does not exist")
+		}
+		return []oauthSettlementShare{{userID: oauthSettlementAdminUser, amount: totalCost}}, nil
+	}
+
+	allocated := 0.0
+	for i := range shares {
+		if i == len(shares)-1 {
+			shares[i].amount = roundOAuthSettlementCost(totalCost - allocated)
+			break
+		}
+		shares[i].amount = roundOAuthSettlementCost(totalCost * shares[i].amount / denominator)
+		allocated += shares[i].amount
+	}
+	return shares, nil
+}
+
+func roundOAuthSettlementCost(value float64) float64 {
+	return math.Round(value*1e10) / 1e10
+}
+
+func insertOAuthSettlementShares(ctx context.Context, client *dbent.Client, accountID int64, shares []oauthSettlementShare) error {
+	for _, share := range shares {
+		if share.amount <= 0 {
+			continue
+		}
+		requestID := fmt.Sprintf("oauth-settlement-%d-%d", accountID, share.userID)
+		_, err := client.ExecContext(ctx, `
+			INSERT INTO usage_logs (
+				user_id, api_key_id, account_id, request_id, model, record_type,
+				total_cost, actual_cost, rate_multiplier, account_rate_multiplier, account_stats_cost, created_at
+			) VALUES ($1, NULL, $2, $3, $4, $5, 0, 0, 1, 1, $6, NOW())
+			ON CONFLICT (account_id, user_id) WHERE record_type = 'oauth_settlement' DO NOTHING
+		`, share.userID, accountID, requestID, oauthSettlementModel, oauthSettlementRecordType, share.amount)
+		if err != nil {
+			return fmt.Errorf("insert oauth settlement record for user %d: %w", share.userID, err)
+		}
 	}
 	return nil
 }

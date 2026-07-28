@@ -39,6 +39,14 @@ func (_c *UsageLogCreate) SetAPIKeyID(v int64) *UsageLogCreate {
 	return _c
 }
 
+// SetNillableAPIKeyID sets the "api_key_id" field if the given value is not nil.
+func (_c *UsageLogCreate) SetNillableAPIKeyID(v *int64) *UsageLogCreate {
+	if v != nil {
+		_c.SetAPIKeyID(*v)
+	}
+	return _c
+}
+
 // SetAccountID sets the "account_id" field.
 func (_c *UsageLogCreate) SetAccountID(v int64) *UsageLogCreate {
 	_c.mutation.SetAccountID(v)
@@ -54,6 +62,20 @@ func (_c *UsageLogCreate) SetRequestID(v string) *UsageLogCreate {
 // SetModel sets the "model" field.
 func (_c *UsageLogCreate) SetModel(v string) *UsageLogCreate {
 	_c.mutation.SetModel(v)
+	return _c
+}
+
+// SetRecordType sets the "record_type" field.
+func (_c *UsageLogCreate) SetRecordType(v string) *UsageLogCreate {
+	_c.mutation.SetRecordType(v)
+	return _c
+}
+
+// SetNillableRecordType sets the "record_type" field if the given value is not nil.
+func (_c *UsageLogCreate) SetNillableRecordType(v *string) *UsageLogCreate {
+	if v != nil {
+		_c.SetRecordType(*v)
+	}
 	return _c
 }
 
@@ -669,6 +691,10 @@ func (_c *UsageLogCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *UsageLogCreate) defaults() {
+	if _, ok := _c.mutation.RecordType(); !ok {
+		v := usagelog.DefaultRecordType
+		_c.mutation.SetRecordType(v)
+	}
 	if _, ok := _c.mutation.InputTokens(); !ok {
 		v := usagelog.DefaultInputTokens
 		_c.mutation.SetInputTokens(v)
@@ -756,9 +782,6 @@ func (_c *UsageLogCreate) check() error {
 	if _, ok := _c.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "UsageLog.user_id"`)}
 	}
-	if _, ok := _c.mutation.APIKeyID(); !ok {
-		return &ValidationError{Name: "api_key_id", err: errors.New(`ent: missing required field "UsageLog.api_key_id"`)}
-	}
 	if _, ok := _c.mutation.AccountID(); !ok {
 		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "UsageLog.account_id"`)}
 	}
@@ -776,6 +799,14 @@ func (_c *UsageLogCreate) check() error {
 	if v, ok := _c.mutation.Model(); ok {
 		if err := usagelog.ModelValidator(v); err != nil {
 			return &ValidationError{Name: "model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.model": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.RecordType(); !ok {
+		return &ValidationError{Name: "record_type", err: errors.New(`ent: missing required field "UsageLog.record_type"`)}
+	}
+	if v, ok := _c.mutation.RecordType(); ok {
+		if err := usagelog.RecordTypeValidator(v); err != nil {
+			return &ValidationError{Name: "record_type", err: fmt.Errorf(`ent: validator failed for field "UsageLog.record_type": %w`, err)}
 		}
 	}
 	if v, ok := _c.mutation.RequestedModel(); ok {
@@ -901,9 +932,6 @@ func (_c *UsageLogCreate) check() error {
 	if len(_c.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "UsageLog.user"`)}
 	}
-	if len(_c.mutation.APIKeyIDs()) == 0 {
-		return &ValidationError{Name: "api_key", err: errors.New(`ent: missing required edge "UsageLog.api_key"`)}
-	}
 	if len(_c.mutation.AccountIDs()) == 0 {
 		return &ValidationError{Name: "account", err: errors.New(`ent: missing required edge "UsageLog.account"`)}
 	}
@@ -941,6 +969,10 @@ func (_c *UsageLogCreate) createSpec() (*UsageLog, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Model(); ok {
 		_spec.SetField(usagelog.FieldModel, field.TypeString, value)
 		_node.Model = value
+	}
+	if value, ok := _c.mutation.RecordType(); ok {
+		_spec.SetField(usagelog.FieldRecordType, field.TypeString, value)
+		_node.RecordType = value
 	}
 	if value, ok := _c.mutation.RequestedModel(); ok {
 		_spec.SetField(usagelog.FieldRequestedModel, field.TypeString, value)
@@ -1125,7 +1157,7 @@ func (_c *UsageLogCreate) createSpec() (*UsageLog, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.APIKeyID = nodes[0]
+		_node.APIKeyID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.AccountIDs(); len(nodes) > 0 {
@@ -1255,6 +1287,12 @@ func (u *UsageLogUpsert) UpdateAPIKeyID() *UsageLogUpsert {
 	return u
 }
 
+// ClearAPIKeyID clears the value of the "api_key_id" field.
+func (u *UsageLogUpsert) ClearAPIKeyID() *UsageLogUpsert {
+	u.SetNull(usagelog.FieldAPIKeyID)
+	return u
+}
+
 // SetAccountID sets the "account_id" field.
 func (u *UsageLogUpsert) SetAccountID(v int64) *UsageLogUpsert {
 	u.Set(usagelog.FieldAccountID, v)
@@ -1288,6 +1326,18 @@ func (u *UsageLogUpsert) SetModel(v string) *UsageLogUpsert {
 // UpdateModel sets the "model" field to the value that was provided on create.
 func (u *UsageLogUpsert) UpdateModel() *UsageLogUpsert {
 	u.SetExcluded(usagelog.FieldModel)
+	return u
+}
+
+// SetRecordType sets the "record_type" field.
+func (u *UsageLogUpsert) SetRecordType(v string) *UsageLogUpsert {
+	u.Set(usagelog.FieldRecordType, v)
+	return u
+}
+
+// UpdateRecordType sets the "record_type" field to the value that was provided on create.
+func (u *UsageLogUpsert) UpdateRecordType() *UsageLogUpsert {
+	u.SetExcluded(usagelog.FieldRecordType)
 	return u
 }
 
@@ -2078,6 +2128,13 @@ func (u *UsageLogUpsertOne) UpdateAPIKeyID() *UsageLogUpsertOne {
 	})
 }
 
+// ClearAPIKeyID clears the value of the "api_key_id" field.
+func (u *UsageLogUpsertOne) ClearAPIKeyID() *UsageLogUpsertOne {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.ClearAPIKeyID()
+	})
+}
+
 // SetAccountID sets the "account_id" field.
 func (u *UsageLogUpsertOne) SetAccountID(v int64) *UsageLogUpsertOne {
 	return u.Update(func(s *UsageLogUpsert) {
@@ -2117,6 +2174,20 @@ func (u *UsageLogUpsertOne) SetModel(v string) *UsageLogUpsertOne {
 func (u *UsageLogUpsertOne) UpdateModel() *UsageLogUpsertOne {
 	return u.Update(func(s *UsageLogUpsert) {
 		s.UpdateModel()
+	})
+}
+
+// SetRecordType sets the "record_type" field.
+func (u *UsageLogUpsertOne) SetRecordType(v string) *UsageLogUpsertOne {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.SetRecordType(v)
+	})
+}
+
+// UpdateRecordType sets the "record_type" field to the value that was provided on create.
+func (u *UsageLogUpsertOne) UpdateRecordType() *UsageLogUpsertOne {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.UpdateRecordType()
 	})
 }
 
@@ -3192,6 +3263,13 @@ func (u *UsageLogUpsertBulk) UpdateAPIKeyID() *UsageLogUpsertBulk {
 	})
 }
 
+// ClearAPIKeyID clears the value of the "api_key_id" field.
+func (u *UsageLogUpsertBulk) ClearAPIKeyID() *UsageLogUpsertBulk {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.ClearAPIKeyID()
+	})
+}
+
 // SetAccountID sets the "account_id" field.
 func (u *UsageLogUpsertBulk) SetAccountID(v int64) *UsageLogUpsertBulk {
 	return u.Update(func(s *UsageLogUpsert) {
@@ -3231,6 +3309,20 @@ func (u *UsageLogUpsertBulk) SetModel(v string) *UsageLogUpsertBulk {
 func (u *UsageLogUpsertBulk) UpdateModel() *UsageLogUpsertBulk {
 	return u.Update(func(s *UsageLogUpsert) {
 		s.UpdateModel()
+	})
+}
+
+// SetRecordType sets the "record_type" field.
+func (u *UsageLogUpsertBulk) SetRecordType(v string) *UsageLogUpsertBulk {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.SetRecordType(v)
+	})
+}
+
+// UpdateRecordType sets the "record_type" field to the value that was provided on create.
+func (u *UsageLogUpsertBulk) UpdateRecordType() *UsageLogUpsertBulk {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.UpdateRecordType()
 	})
 }
 

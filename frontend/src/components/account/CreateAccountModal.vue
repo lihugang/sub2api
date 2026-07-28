@@ -2722,10 +2722,14 @@
           />
           <p class="input-hint">{{ t('admin.accounts.priorityHint') }}</p>
         </div>
-        <div>
+        <div v-if="form.type !== 'oauth'">
           <label class="input-label">{{ t('admin.accounts.billingRateMultiplier') }}</label>
           <input v-model.number="form.rate_multiplier" type="number" min="0" step="0.001" class="input" />
           <p class="input-hint">{{ t('admin.accounts.billingRateMultiplierHint') }}</p>
+        </div>
+        <div v-else>
+          <label class="input-label">{{ t('admin.accounts.oauthSettlementCost') }}</label>
+          <input v-model.number="form.oauth_settlement_cost" type="number" min="0" step="0.0000000001" class="input" />
         </div>
       </div>
       <div class="border-t border-gray-200 pt-4 dark:border-dark-600">
@@ -4046,6 +4050,7 @@ const form = reactive({
   load_factor: null as number | null,
   priority: 1,
   rate_multiplier: 1,
+  oauth_settlement_cost: null as number | null,
   group_ids: [] as number[],
   expires_at: null as number | null
 })
@@ -4585,6 +4590,7 @@ const resetForm = () => {
   form.load_factor = null
   form.priority = 1
   form.rate_multiplier = 1
+  form.oauth_settlement_cost = null
   form.group_ids = []
   form.expires_at = null
   accountCategory.value = 'oauth-based'
@@ -4773,6 +4779,13 @@ const buildAnthropicExtra = (base?: Record<string, unknown>): Record<string, unk
 
 // Helper function to create account with mixed channel warning handling
 const doCreateAccount = async (payload: CreateAccountRequest) => {
+  if (payload.type === 'oauth') {
+    payload = {
+      ...payload,
+      rate_multiplier: 0,
+      oauth_settlement_cost: form.oauth_settlement_cost ?? undefined
+    }
+  }
   const canContinue = await ensureAntigravityMixedChannelConfirmed(async () => {
     await submitCreateAccount(payload)
   })

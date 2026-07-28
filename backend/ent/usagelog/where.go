@@ -80,6 +80,11 @@ func Model(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldModel, v))
 }
 
+// RecordType applies equality check predicate on the "record_type" field. It's identical to RecordTypeEQ.
+func RecordType(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldRecordType, v))
+}
+
 // RequestedModel applies equality check predicate on the "requested_model" field. It's identical to RequestedModelEQ.
 func RequestedModel(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldRequestedModel, v))
@@ -315,6 +320,16 @@ func APIKeyIDNotIn(vs ...int64) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldNotIn(FieldAPIKeyID, vs...))
 }
 
+// APIKeyIDIsNil applies the IsNil predicate on the "api_key_id" field.
+func APIKeyIDIsNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIsNull(FieldAPIKeyID))
+}
+
+// APIKeyIDNotNil applies the NotNil predicate on the "api_key_id" field.
+func APIKeyIDNotNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotNull(FieldAPIKeyID))
+}
+
 // AccountIDEQ applies the EQ predicate on the "account_id" field.
 func AccountIDEQ(v int64) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldAccountID, v))
@@ -463,6 +478,71 @@ func ModelEqualFold(v string) predicate.UsageLog {
 // ModelContainsFold applies the ContainsFold predicate on the "model" field.
 func ModelContainsFold(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldContainsFold(FieldModel, v))
+}
+
+// RecordTypeEQ applies the EQ predicate on the "record_type" field.
+func RecordTypeEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldRecordType, v))
+}
+
+// RecordTypeNEQ applies the NEQ predicate on the "record_type" field.
+func RecordTypeNEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNEQ(FieldRecordType, v))
+}
+
+// RecordTypeIn applies the In predicate on the "record_type" field.
+func RecordTypeIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIn(FieldRecordType, vs...))
+}
+
+// RecordTypeNotIn applies the NotIn predicate on the "record_type" field.
+func RecordTypeNotIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotIn(FieldRecordType, vs...))
+}
+
+// RecordTypeGT applies the GT predicate on the "record_type" field.
+func RecordTypeGT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGT(FieldRecordType, v))
+}
+
+// RecordTypeGTE applies the GTE predicate on the "record_type" field.
+func RecordTypeGTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGTE(FieldRecordType, v))
+}
+
+// RecordTypeLT applies the LT predicate on the "record_type" field.
+func RecordTypeLT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLT(FieldRecordType, v))
+}
+
+// RecordTypeLTE applies the LTE predicate on the "record_type" field.
+func RecordTypeLTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLTE(FieldRecordType, v))
+}
+
+// RecordTypeContains applies the Contains predicate on the "record_type" field.
+func RecordTypeContains(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContains(FieldRecordType, v))
+}
+
+// RecordTypeHasPrefix applies the HasPrefix predicate on the "record_type" field.
+func RecordTypeHasPrefix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasPrefix(FieldRecordType, v))
+}
+
+// RecordTypeHasSuffix applies the HasSuffix predicate on the "record_type" field.
+func RecordTypeHasSuffix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasSuffix(FieldRecordType, v))
+}
+
+// RecordTypeEqualFold applies the EqualFold predicate on the "record_type" field.
+func RecordTypeEqualFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEqualFold(FieldRecordType, v))
+}
+
+// RecordTypeContainsFold applies the ContainsFold predicate on the "record_type" field.
+func RecordTypeContainsFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContainsFold(FieldRecordType, v))
 }
 
 // RequestedModelEQ applies the EQ predicate on the "requested_model" field.

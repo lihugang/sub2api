@@ -1439,10 +1439,14 @@
           />
           <p class="input-hint">{{ t('admin.accounts.priorityHint') }}</p>
         </div>
-        <div>
+        <div v-if="account.type !== 'oauth'">
           <label class="input-label">{{ t('admin.accounts.billingRateMultiplier') }}</label>
           <input v-model.number="form.rate_multiplier" type="number" min="0" step="0.001" class="input" />
           <p class="input-hint">{{ t('admin.accounts.billingRateMultiplierHint') }}</p>
+        </div>
+        <div v-else>
+          <label class="input-label">{{ t('admin.accounts.oauthSettlementCost') }}</label>
+          <input v-model.number="form.oauth_settlement_cost" type="number" min="0" step="0.0000000001" class="input" />
         </div>
       </div>
       <div class="border-t border-gray-200 pt-4 dark:border-dark-600">
@@ -3221,6 +3225,7 @@ const form = reactive({
   load_factor: null as number | null,
   priority: 1,
   rate_multiplier: 1,
+  oauth_settlement_cost: null as number | null,
   status: 'active' as 'active' | 'inactive' | 'error',
   group_ids: [] as number[],
   expires_at: null as number | null
@@ -3310,6 +3315,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   form.load_factor = newAccount.load_factor ?? null
   form.priority = newAccount.priority
   form.rate_multiplier = newAccount.rate_multiplier ?? 1
+  form.oauth_settlement_cost = newAccount.oauth_settlement_cost ?? null
   form.status = (newAccount.status === 'active' || newAccount.status === 'inactive' || newAccount.status === 'error')
     ? newAccount.status
     : 'active'
@@ -4126,6 +4132,11 @@ const handleSubmit = async () => {
       updatePayload.load_factor = 0
     }
     updatePayload.auto_pause_on_expired = autoPauseOnExpired.value
+    if (props.account.type === 'oauth') {
+      updatePayload.rate_multiplier = 0
+    } else {
+      delete updatePayload.oauth_settlement_cost
+    }
 
     // For apikey type, handle credentials update
     if (props.account.type === 'apikey') {

@@ -120,7 +120,7 @@ func createAccountRecord(ctx context.Context, client *dbent.Client, account *ser
 		builder.SetRateMultiplier(*account.RateMultiplier)
 	}
 	if account.OAuthSettlementCost != nil {
-		builder.SetOAuthSettlementCost(*account.OAuthSettlementCost)
+		builder.SetOauthSettlementCost(*account.OAuthSettlementCost)
 	}
 	if account.LoadFactor != nil {
 		builder.SetLoadFactor(*account.LoadFactor)
@@ -484,7 +484,11 @@ func (r *accountRepository) updateLockedAccount(ctx context.Context, client *dbe
 	if account.RateMultiplier != nil {
 		builder.SetRateMultiplier(*account.RateMultiplier)
 	}
-	builder.SetNillableOAuthSettlementCost(account.OAuthSettlementCost)
+	if account.OAuthSettlementCost != nil {
+		builder.SetOauthSettlementCost(*account.OAuthSettlementCost)
+	} else {
+		builder.ClearOauthSettlementCost()
+	}
 	if account.LoadFactor != nil {
 		builder.SetLoadFactor(*account.LoadFactor)
 	} else {
@@ -3265,7 +3269,7 @@ func accountEntityToService(m *dbent.Account) *service.Account {
 		Concurrency:             m.Concurrency,
 		Priority:                m.Priority,
 		RateMultiplier:          &rateMultiplier,
-		OAuthSettlementCost:     m.OAuthSettlementCost,
+		OAuthSettlementCost:     m.OauthSettlementCost,
 		LoadFactor:              m.LoadFactor,
 		Status:                  m.Status,
 		ErrorMessage:            derefString(m.ErrorMessage),

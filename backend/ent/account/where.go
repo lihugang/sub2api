@@ -120,6 +120,11 @@ func RateMultiplier(v float64) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldRateMultiplier, v))
 }
 
+// OauthSettlementCost applies equality check predicate on the "oauth_settlement_cost" field. It's identical to OauthSettlementCostEQ.
+func OauthSettlementCost(v float64) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldOauthSettlementCost, v))
+}
+
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
 func Status(v string) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldStatus, v))
@@ -843,6 +848,56 @@ func RateMultiplierLT(v float64) predicate.Account {
 // RateMultiplierLTE applies the LTE predicate on the "rate_multiplier" field.
 func RateMultiplierLTE(v float64) predicate.Account {
 	return predicate.Account(sql.FieldLTE(FieldRateMultiplier, v))
+}
+
+// OauthSettlementCostEQ applies the EQ predicate on the "oauth_settlement_cost" field.
+func OauthSettlementCostEQ(v float64) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldOauthSettlementCost, v))
+}
+
+// OauthSettlementCostNEQ applies the NEQ predicate on the "oauth_settlement_cost" field.
+func OauthSettlementCostNEQ(v float64) predicate.Account {
+	return predicate.Account(sql.FieldNEQ(FieldOauthSettlementCost, v))
+}
+
+// OauthSettlementCostIn applies the In predicate on the "oauth_settlement_cost" field.
+func OauthSettlementCostIn(vs ...float64) predicate.Account {
+	return predicate.Account(sql.FieldIn(FieldOauthSettlementCost, vs...))
+}
+
+// OauthSettlementCostNotIn applies the NotIn predicate on the "oauth_settlement_cost" field.
+func OauthSettlementCostNotIn(vs ...float64) predicate.Account {
+	return predicate.Account(sql.FieldNotIn(FieldOauthSettlementCost, vs...))
+}
+
+// OauthSettlementCostGT applies the GT predicate on the "oauth_settlement_cost" field.
+func OauthSettlementCostGT(v float64) predicate.Account {
+	return predicate.Account(sql.FieldGT(FieldOauthSettlementCost, v))
+}
+
+// OauthSettlementCostGTE applies the GTE predicate on the "oauth_settlement_cost" field.
+func OauthSettlementCostGTE(v float64) predicate.Account {
+	return predicate.Account(sql.FieldGTE(FieldOauthSettlementCost, v))
+}
+
+// OauthSettlementCostLT applies the LT predicate on the "oauth_settlement_cost" field.
+func OauthSettlementCostLT(v float64) predicate.Account {
+	return predicate.Account(sql.FieldLT(FieldOauthSettlementCost, v))
+}
+
+// OauthSettlementCostLTE applies the LTE predicate on the "oauth_settlement_cost" field.
+func OauthSettlementCostLTE(v float64) predicate.Account {
+	return predicate.Account(sql.FieldLTE(FieldOauthSettlementCost, v))
+}
+
+// OauthSettlementCostIsNil applies the IsNil predicate on the "oauth_settlement_cost" field.
+func OauthSettlementCostIsNil() predicate.Account {
+	return predicate.Account(sql.FieldIsNull(FieldOauthSettlementCost))
+}
+
+// OauthSettlementCostNotNil applies the NotNil predicate on the "oauth_settlement_cost" field.
+func OauthSettlementCostNotNil() predicate.Account {
+	return predicate.Account(sql.FieldNotNull(FieldOauthSettlementCost))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
