@@ -21,13 +21,14 @@ func TestAuthHandlerGetCurrentUserReturnsProfileCompatibilityFields(t *testing.T
 	verifiedAt := time.Date(2026, 4, 20, 8, 30, 0, 0, time.UTC)
 	repo := &userHandlerRepoStub{
 		user: &service.User{
-			ID:           31,
-			Email:        "me@example.com",
-			Username:     "linuxdo-handle",
-			Role:         service.RoleUser,
-			Status:       service.StatusActive,
-			AvatarURL:    "https://cdn.example.com/linuxdo.png",
-			AvatarSource: "remote_url",
+			ID:                     31,
+			Email:                  "me@example.com",
+			Username:               "linuxdo-handle",
+			Role:                   service.RoleUser,
+			Status:                 service.StatusActive,
+			AvatarURL:              "https://cdn.example.com/linuxdo.png",
+			AvatarSource:           "remote_url",
+			ModelRoutingNoticeMode: service.ModelRoutingNoticeModeDisabled,
 		},
 			identities: []service.UserAuthIdentityRecord{
 				{
@@ -65,6 +66,7 @@ func TestAuthHandlerGetCurrentUserReturnsProfileCompatibilityFields(t *testing.T
 	require.Equal(t, true, resp.Data["email_bound"])
 	require.Equal(t, true, resp.Data["linuxdo_bound"])
 	require.Equal(t, "https://cdn.example.com/linuxdo.png", resp.Data["avatar_url"])
+	require.Equal(t, service.ModelRoutingNoticeModeDisabled, resp.Data["model_routing_notice_mode"])
 
 	authBindings, ok := resp.Data["auth_bindings"].(map[string]any)
 	require.True(t, ok)

@@ -30,6 +30,75 @@ func TestGatewayAccountNoticeText(t *testing.T) {
 	require.Empty(t, GatewayAccountNoticeText(account, ModelRoutingNoticeModeDisabled))
 }
 
+func TestLastGatewayAccountNoticeAccountID(t *testing.T) {
+	plain := GatewayAccountNoticeText(&Account{ID: 42, Name: "plain"}, ModelRoutingNoticeModePlain)
+	color := GatewayAccountNoticeText(&Account{ID: 73, Name: "color"})
+	mustJSON := func(value any) []byte {
+		body, err := json.Marshal(value)
+		require.NoError(t, err)
+		return body
+	}
+	tests := []struct {
+		name    string
+		body    []byte
+		wantID  int64
+		wantHit bool
+	}{
+		{
+			name:    "reads plain assistant message",
+			body:    mustJSON(map[string]any{"messages": []any{map[string]any{"role": "assistant", "content": plain + "answer"}}}),
+			wantID:  42,
+			wantHit: true,
+		},
+		{
+			name:    "reads colored gemini model part",
+			body:    mustJSON(map[string]any{"contents": []any{map[string]any{"role": "model", "parts": []any{map[string]any{"text": color + "answer"}}}}}),
+			wantID:  73,
+			wantHit: true,
+		},
+		{
+			name:    "reads responses assistant input",
+			body:    mustJSON(map[string]any{"input": []any{map[string]any{"role": "assistant", "content": []any{map[string]any{"type": "input_text", "text": plain + "answer"}}}}}),
+			wantID:  42,
+			wantHit: true,
+		},
+		{
+			name:    "uses latest assistant banner",
+			body:    mustJSON(map[string]any{"messages": []any{map[string]any{"role": "assistant", "content": plain + "one"}, map[string]any{"role": "assistant", "content": color + "two"}}}),
+			wantID:  73,
+			wantHit: true,
+		},
+		{
+			name:    "ignores user supplied prefix",
+			body:    mustJSON(map[string]any{"messages": []any{map[string]any{"role": "user", "content": plain}}}),
+			wantHit: false,
+		},
+		{
+			name:    "ignores malformed banner",
+			body:    []byte(`{"messages":[{"role":"assistant","content":"[Corgi AI Gateway] no account id"}]}`),
+			wantHit: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gotID, gotHit := LastGatewayAccountNoticeAccountID(test.body)
+			require.Equal(t, test.wantHit, gotHit)
+			require.Equal(t, test.wantID, gotID)
+		})
+	}
+}
+
+func TestShouldScheduleGatewayAccountNotice(t *testing.T) {
+	account := &Account{ID: 42}
+	require.True(t, shouldScheduleGatewayAccountNotice(0, account, 0, false), "new sessions still show a notice")
+	require.False(t, shouldScheduleGatewayAccountNotice(42, account, 0, false), "sticky account should not repeat a notice")
+	require.False(t, shouldScheduleGatewayAccountNotice(0, account, 42, true), "matching input notice should not repeat")
+	require.True(t, shouldScheduleGatewayAccountNotice(0, account, 73, true), "changed account should update the notice")
+	require.Nil(t, NewGatewayAccountNoticeTransformerWithInput(GatewayAccountNoticeOpenAIResponses, 0, account, 42, true))
+	require.NotNil(t, NewGatewayAccountNoticeTransformerWithInput(GatewayAccountNoticeOpenAIResponses, 0, account, 73, true))
+}
+
 func TestStripGatewayAccountNoticeFromBody(t *testing.T) {
 	notice := "[Corgi AI Gateway] banner\\n"
 	tests := []struct {

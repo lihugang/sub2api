@@ -19,7 +19,10 @@ const (
 	gatewayAccountNoticeColorReset   = "\x1b[0m"
 )
 
-const gatewayAccountNoticeContextKey = "gateway_account_notice_state"
+const (
+	gatewayAccountNoticeContextKey      = "gateway_account_notice_state"
+	gatewayAccountNoticeInputContextKey = "gateway_account_notice_input_state"
+)
 
 // GatewayAccountNoticeMode identifies the client wire format being written.
 // The writer only edits protocol-defined text fields for the selected mode.
@@ -38,6 +41,11 @@ type gatewayAccountNoticeState struct {
 	injected bool
 }
 
+type gatewayAccountNoticeInputState struct {
+	lastAccountID int64
+	found         bool
+}
+
 // GatewayAccountNoticeTransformer applies a pending notice to response JSON
 // frames that bypass gin's HTTP ResponseWriter, such as Responses WebSocket.
 type GatewayAccountNoticeTransformer struct {
@@ -47,7 +55,21 @@ type GatewayAccountNoticeTransformer struct {
 // NewGatewayAccountNoticeTransformer creates a protocol-aware transformer
 // when a session is new or has switched accounts. A nil result is a no-op.
 func NewGatewayAccountNoticeTransformer(mode GatewayAccountNoticeMode, previousAccountID int64, account *Account, noticeModes ...string) *GatewayAccountNoticeTransformer {
-	if account == nil || (previousAccountID > 0 && previousAccountID == account.ID) {
+	return NewGatewayAccountNoticeTransformerWithInput(mode, previousAccountID, account, 0, false, noticeModes...)
+}
+
+// NewGatewayAccountNoticeTransformerForContext creates a transformer using
+// input state captured from the current request before gateway notices were
+// stripped from its body.
+func NewGatewayAccountNoticeTransformerForContext(c *gin.Context, mode GatewayAccountNoticeMode, previousAccountID int64, account *Account, noticeModes ...string) *GatewayAccountNoticeTransformer {
+	inputAccountID, hasInputNotice := gatewayAccountNoticeInputFromContext(c)
+	return NewGatewayAccountNoticeTransformerWithInput(mode, previousAccountID, account, inputAccountID, hasInputNotice, noticeModes...)
+}
+
+// NewGatewayAccountNoticeTransformerWithInput creates a transformer after
+// considering the last gateway notice found in the client's input history.
+func NewGatewayAccountNoticeTransformerWithInput(mode GatewayAccountNoticeMode, previousAccountID int64, account *Account, inputAccountID int64, hasInputNotice bool, noticeModes ...string) *GatewayAccountNoticeTransformer {
+	if !shouldScheduleGatewayAccountNotice(previousAccountID, account, inputAccountID, hasInputNotice) {
 		return nil
 	}
 	text := GatewayAccountNoticeText(account, noticeModes...)
@@ -107,7 +129,11 @@ func GatewayAccountNoticeText(account *Account, noticeModes ...string) string {
 // emitted by this response. It intentionally does nothing when routing remains
 // on the bound account.
 func SetGatewayAccountNotice(c *gin.Context, mode GatewayAccountNoticeMode, previousAccountID int64, account *Account, noticeModes ...string) {
-	if c == nil || account == nil || (previousAccountID > 0 && previousAccountID == account.ID) {
+	if c == nil {
+		return
+	}
+	inputAccountID, hasInputNotice := gatewayAccountNoticeInputFromContext(c)
+	if !shouldScheduleGatewayAccountNotice(previousAccountID, account, inputAccountID, hasInputNotice) {
 		return
 	}
 	text := GatewayAccountNoticeText(account, noticeModes...)
@@ -126,6 +152,149 @@ func SetGatewayAccountNotice(c *gin.Context, mode GatewayAccountNoticeMode, prev
 	notice := &gatewayAccountNoticeState{text: text, mode: mode}
 	c.Set(gatewayAccountNoticeContextKey, notice)
 	c.Writer = &gatewayAccountNoticeWriter{ResponseWriter: c.Writer, state: notice}
+}
+
+func shouldScheduleGatewayAccountNotice(previousAccountID int64, account *Account, inputAccountID int64, hasInputNotice bool) bool {
+	if account == nil {
+		return false
+	}
+	if previousAccountID > 0 && previousAccountID == account.ID {
+		return false
+	}
+	return !hasInputNotice || inputAccountID != account.ID
+}
+
+// CaptureGatewayAccountNoticeInput records the newest gateway account banner
+// from the original request body. Callers must invoke it before stripping
+// gateway-generated banners for routing and upstream forwarding.
+func CaptureGatewayAccountNoticeInput(c *gin.Context, body []byte) {
+	if c == nil {
+		return
+	}
+	accountID, found := LastGatewayAccountNoticeAccountID(body)
+	c.Set(gatewayAccountNoticeInputContextKey, gatewayAccountNoticeInputState{
+		lastAccountID: accountID,
+		found:         found,
+	})
+}
+
+func gatewayAccountNoticeInputFromContext(c *gin.Context) (int64, bool) {
+	if c == nil {
+		return 0, false
+	}
+	state, ok := c.Get(gatewayAccountNoticeInputContextKey)
+	if !ok {
+		return 0, false
+	}
+	input, ok := state.(gatewayAccountNoticeInputState)
+	if !ok || !input.found {
+		return 0, false
+	}
+	return input.lastAccountID, true
+}
+
+// LastGatewayAccountNoticeAccountID returns the account ID from the latest
+// gateway-generated banner in assistant/model input history. It deliberately
+// ignores user, system, developer, and tool content.
+func LastGatewayAccountNoticeAccountID(body []byte) (int64, bool) {
+	if !bytes.Contains(body, []byte(gatewayAccountNoticePrefix)) {
+		return 0, false
+	}
+	var request map[string]any
+	if err := json.Unmarshal(body, &request); err != nil {
+		return 0, false
+	}
+
+	var (
+		lastAccountID int64
+		found         bool
+	)
+	for _, field := range []string{"messages", "input", "contents"} {
+		accountID, fieldFound := lastGatewayNoticeAccountIDInEntries(request[field])
+		if fieldFound {
+			lastAccountID = accountID
+			found = true
+		}
+	}
+	return lastAccountID, found
+}
+
+func lastGatewayNoticeAccountIDInEntries(value any) (int64, bool) {
+	entries, ok := value.([]any)
+	if !ok {
+		return 0, false
+	}
+	var (
+		lastAccountID int64
+		found         bool
+	)
+	for _, entry := range entries {
+		message, ok := entry.(map[string]any)
+		if !ok || !gatewayNoticeAssistantRole(message) {
+			continue
+		}
+		for _, field := range []string{"content", "parts"} {
+			accountID, messageFound := lastGatewayNoticeAccountIDInContent(message[field])
+			if messageFound {
+				lastAccountID = accountID
+				found = true
+			}
+		}
+	}
+	return lastAccountID, found
+}
+
+func lastGatewayNoticeAccountIDInContent(value any) (int64, bool) {
+	switch content := value.(type) {
+	case string:
+		return gatewayNoticeAccountIDFromText(content)
+	case []any:
+		var (
+			lastAccountID int64
+			found         bool
+		)
+		for _, block := range content {
+			blockMap, ok := block.(map[string]any)
+			if !ok {
+				continue
+			}
+			blockType, _ := blockMap["type"].(string)
+			text, isText := blockMap["text"].(string)
+			if !isText || !gatewayNoticeTextBlockType(blockType) {
+				continue
+			}
+			accountID, blockFound := gatewayNoticeAccountIDFromText(text)
+			if blockFound {
+				lastAccountID = accountID
+				found = true
+			}
+		}
+		return lastAccountID, found
+	default:
+		return 0, false
+	}
+}
+
+func gatewayNoticeAccountIDFromText(text string) (int64, bool) {
+	if !strings.HasPrefix(text, gatewayAccountNoticePrefix) && !strings.HasPrefix(text, gatewayAccountNoticeColorGateway+gatewayAccountNoticePrefix) {
+		return 0, false
+	}
+	accountStart := strings.IndexByte(text, '#')
+	if accountStart < 0 {
+		return 0, false
+	}
+	accountEnd := accountStart + 1
+	for accountEnd < len(text) && text[accountEnd] >= '0' && text[accountEnd] <= '9' {
+		accountEnd++
+	}
+	if accountEnd == accountStart+1 {
+		return 0, false
+	}
+	accountID, err := strconv.ParseInt(text[accountStart+1:accountEnd], 10, 64)
+	if err != nil || accountID <= 0 {
+		return 0, false
+	}
+	return accountID, true
 }
 
 // StripGatewayAccountNoticeFromBody removes gateway-generated notices from

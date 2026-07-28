@@ -67,6 +67,7 @@ func (h *GatewayHandler) Responses(c *gin.Context) {
 		h.responsesErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
 		return
 	}
+	service.CaptureGatewayAccountNoticeInput(c, body)
 	if cleaned, changed := service.StripGatewayAccountNoticeFromBody(body); changed {
 		body = cleaned
 	}

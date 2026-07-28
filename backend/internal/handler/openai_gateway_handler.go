@@ -284,6 +284,7 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 	setOpsRequestContext(c, "", false)
 	// This is the identity body used by sticky routing below. Clean it before
 	// compact normalization so an old banner cannot affect the session key.
+	service.CaptureGatewayAccountNoticeInput(c, body)
 	if cleaned, changed := service.StripGatewayAccountNoticeFromBody(body); changed {
 		body = cleaned
 	}
@@ -926,6 +927,7 @@ func (h *OpenAIGatewayHandler) Messages(c *gin.Context) {
 		h.anthropicErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
 		return
 	}
+	service.CaptureGatewayAccountNoticeInput(c, body)
 	if cleaned, changed := service.StripGatewayAccountNoticeFromBody(body); changed {
 		body = cleaned
 	}
@@ -1555,6 +1557,7 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 		closeOpenAIClientWS(wsConn, coderws.StatusPolicyViolation, "invalid JSON payload")
 		return
 	}
+	service.CaptureGatewayAccountNoticeInput(c, firstMessage)
 	if cleaned, changed := service.StripGatewayAccountNoticeFromBody(firstMessage); changed {
 		firstMessage = cleaned
 	}
@@ -1773,7 +1776,8 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 		}
 
 		account := selection.Account
-		noticeTransformer := service.NewGatewayAccountNoticeTransformer(
+		noticeTransformer := service.NewGatewayAccountNoticeTransformerForContext(
+			c,
 			service.GatewayAccountNoticeOpenAIResponses,
 			previousSessionAccountID,
 			account,

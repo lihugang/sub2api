@@ -166,6 +166,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
 		return
 	}
+	service.CaptureGatewayAccountNoticeInput(c, body)
 	// Remove gateway-generated banners before every downstream decision uses the
 	// request body. Parse first so malformed payloads retain the established
 	// validation error path.

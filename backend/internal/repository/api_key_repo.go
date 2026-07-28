@@ -893,6 +893,7 @@ func userEntityToService(u *dbent.User) *service.User {
 		BalanceNotifyEnabled:       u.BalanceNotifyEnabled,
 		BalanceNotifyThresholdType: u.BalanceNotifyThresholdType,
 		BalanceNotifyThreshold:     u.BalanceNotifyThreshold,
+		ModelRoutingNoticeMode:     service.NormalizeModelRoutingNoticeMode(u.ModelRoutingNoticeMode),
 		TotalRecharged:             u.TotalRecharged,
 		RPMLimit:                   u.RpmLimit,
 		CreatedAt:                  u.CreatedAt,

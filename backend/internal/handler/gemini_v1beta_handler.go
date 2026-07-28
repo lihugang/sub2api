@@ -189,6 +189,7 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 		googleError(c, http.StatusBadRequest, "Request body is empty")
 		return
 	}
+	service.CaptureGatewayAccountNoticeInput(c, body)
 	if cleaned, changed := service.StripGatewayAccountNoticeFromBody(body); changed {
 		body = cleaned
 	}
