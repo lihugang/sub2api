@@ -156,6 +156,7 @@ func (r *apiKeyRepository) GetByKeyForAuth(ctx context.Context, key string) (*se
 				user.FieldBalanceNotifyThresholdType,
 				user.FieldBalanceNotifyThreshold,
 				user.FieldBalanceNotifyExtraEmails,
+				user.FieldModelRoutingNoticeMode,
 				user.FieldTotalRecharged,
 				user.FieldSignupSource,
 				user.FieldLastLoginAt,

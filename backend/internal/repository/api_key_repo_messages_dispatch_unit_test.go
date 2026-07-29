@@ -73,3 +73,28 @@ func TestAPIKeyRepository_GetByKeyForAuth_PreservesMessagesDispatchModelConfig_S
 	require.NotNil(t, got.Group)
 	require.Equal(t, group.MessagesDispatchModelConfig, got.Group.MessagesDispatchModelConfig)
 }
+
+func TestAPIKeyRepository_GetByKeyForAuth_PreservesModelRoutingNoticeMode_SQLite(t *testing.T) {
+	repo, client := newAPIKeyRepoSQLite(t)
+	ctx := context.Background()
+	user := mustCreateAPIKeyRepoUser(t, ctx, client, "getbykey-auth-routing-notice@test.com")
+
+	_, err := client.User.UpdateOneID(user.ID).
+		SetModelRoutingNoticeMode(service.ModelRoutingNoticeModeDisabled).
+		Save(ctx)
+	require.NoError(t, err)
+
+	key := &service.APIKey{
+		UserID: user.ID,
+		Key:    "sk-getbykey-auth-routing-notice",
+		Name:   "Routing Notice Key",
+		Status: service.StatusActive,
+	}
+	require.NoError(t, repo.Create(ctx, key))
+
+	got, err := repo.GetByKeyForAuth(ctx, key.Key)
+	require.NoError(t, err)
+	require.NotNil(t, got.User)
+	require.Equal(t, service.ModelRoutingNoticeModeDisabled, got.User.ModelRoutingNoticeMode)
+	require.Empty(t, service.GatewayAccountNoticeText(&service.Account{ID: 1, Name: "primary"}, got.User.ModelRoutingNoticeMode))
+}
