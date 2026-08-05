@@ -121,6 +121,11 @@ func (Account) Fields() []ent.Field {
 			Nillable().
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,10)"}),
 
+		// oauth_billing_mode enables OAuth-style one-time settlement when deleting
+		// an API key account. OAuth accounts are treated as enabled by service logic.
+		field.Bool("oauth_billing_mode").
+			Default(false),
+
 		// status: 账户状态，如 "active", "error", "disabled"
 		field.String("status").
 			MaxLen(20).
