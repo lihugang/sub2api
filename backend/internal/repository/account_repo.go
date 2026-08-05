@@ -114,8 +114,8 @@ func createAccountRecord(ctx context.Context, client *dbent.Client, account *ser
 		SetStatus(account.Status).
 		SetErrorMessage(account.ErrorMessage).
 		SetSchedulable(account.Schedulable).
-		SetAutoPauseOnExpired(account.AutoPauseOnExpired)
-	SetOauthBillingMode(account.OAuthBillingMode)
+		SetAutoPauseOnExpired(account.AutoPauseOnExpired).
+		SetOauthBillingMode(account.OAuthBillingMode)
 
 	if account.RateMultiplier != nil {
 		builder.SetRateMultiplier(*account.RateMultiplier)
@@ -480,8 +480,8 @@ func (r *accountRepository) updateLockedAccount(ctx context.Context, client *dbe
 		SetStatus(account.Status).
 		SetErrorMessage(account.ErrorMessage).
 		SetSchedulable(schedulable).
-		SetAutoPauseOnExpired(account.AutoPauseOnExpired)
-	SetOauthBillingMode(account.OAuthBillingMode)
+		SetAutoPauseOnExpired(account.AutoPauseOnExpired).
+		SetOauthBillingMode(account.OAuthBillingMode)
 
 	if account.RateMultiplier != nil {
 		builder.SetRateMultiplier(*account.RateMultiplier)
