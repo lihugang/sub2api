@@ -244,6 +244,7 @@ func AccountFromServiceShallow(a *service.Account) *Account {
 		Priority:                a.Priority,
 		RateMultiplier:          a.BillingRateMultiplier(),
 		OAuthSettlementCost:     a.OAuthSettlementCost,
+		OAuthBillingMode:        a.OAuthBillingMode,
 		Status:                  a.Status,
 		ErrorMessage:            a.ErrorMessage,
 		LastUsedAt:              a.LastUsedAt,

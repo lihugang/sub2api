@@ -125,6 +125,11 @@ func OauthSettlementCost(v float64) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldOauthSettlementCost, v))
 }
 
+// OauthBillingMode applies equality check predicate on the "oauth_billing_mode" field. It's identical to OauthBillingModeEQ.
+func OauthBillingMode(v bool) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldOauthBillingMode, v))
+}
+
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
 func Status(v string) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldStatus, v))
@@ -898,6 +903,16 @@ func OauthSettlementCostIsNil() predicate.Account {
 // OauthSettlementCostNotNil applies the NotNil predicate on the "oauth_settlement_cost" field.
 func OauthSettlementCostNotNil() predicate.Account {
 	return predicate.Account(sql.FieldNotNull(FieldOauthSettlementCost))
+}
+
+// OauthBillingModeEQ applies the EQ predicate on the "oauth_billing_mode" field.
+func OauthBillingModeEQ(v bool) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldOauthBillingMode, v))
+}
+
+// OauthBillingModeNEQ applies the NEQ predicate on the "oauth_billing_mode" field.
+func OauthBillingModeNEQ(v bool) predicate.Account {
+	return predicate.Account(sql.FieldNEQ(FieldOauthBillingMode, v))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.

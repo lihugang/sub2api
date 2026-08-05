@@ -2306,6 +2306,7 @@ type AccountMutation struct {
 	addrate_multiplier          *float64
 	oauth_settlement_cost       *float64
 	addoauth_settlement_cost    *float64
+	oauth_billing_mode          *bool
 	status                      *string
 	error_message               *string
 	last_used_at                *time.Time
@@ -3213,6 +3214,42 @@ func (m *AccountMutation) ResetOauthSettlementCost() {
 	m.oauth_settlement_cost = nil
 	m.addoauth_settlement_cost = nil
 	delete(m.clearedFields, account.FieldOauthSettlementCost)
+}
+
+// SetOauthBillingMode sets the "oauth_billing_mode" field.
+func (m *AccountMutation) SetOauthBillingMode(b bool) {
+	m.oauth_billing_mode = &b
+}
+
+// OauthBillingMode returns the value of the "oauth_billing_mode" field in the mutation.
+func (m *AccountMutation) OauthBillingMode() (r bool, exists bool) {
+	v := m.oauth_billing_mode
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOauthBillingMode returns the old "oauth_billing_mode" field's value of the Account entity.
+// If the Account object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountMutation) OldOauthBillingMode(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOauthBillingMode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOauthBillingMode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOauthBillingMode: %w", err)
+	}
+	return oldValue.OauthBillingMode, nil
+}
+
+// ResetOauthBillingMode resets all changes to the "oauth_billing_mode" field.
+func (m *AccountMutation) ResetOauthBillingMode() {
+	m.oauth_billing_mode = nil
 }
 
 // SetStatus sets the "status" field.
@@ -4210,7 +4247,7 @@ func (m *AccountMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AccountMutation) Fields() []string {
-	fields := make([]string, 0, 32)
+	fields := make([]string, 0, 33)
 	if m.created_at != nil {
 		fields = append(fields, account.FieldCreatedAt)
 	}
@@ -4258,6 +4295,9 @@ func (m *AccountMutation) Fields() []string {
 	}
 	if m.oauth_settlement_cost != nil {
 		fields = append(fields, account.FieldOauthSettlementCost)
+	}
+	if m.oauth_billing_mode != nil {
+		fields = append(fields, account.FieldOauthBillingMode)
 	}
 	if m.status != nil {
 		fields = append(fields, account.FieldStatus)
@@ -4347,6 +4387,8 @@ func (m *AccountMutation) Field(name string) (ent.Value, bool) {
 		return m.RateMultiplier()
 	case account.FieldOauthSettlementCost:
 		return m.OauthSettlementCost()
+	case account.FieldOauthBillingMode:
+		return m.OauthBillingMode()
 	case account.FieldStatus:
 		return m.Status()
 	case account.FieldErrorMessage:
@@ -4420,6 +4462,8 @@ func (m *AccountMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldRateMultiplier(ctx)
 	case account.FieldOauthSettlementCost:
 		return m.OldOauthSettlementCost(ctx)
+	case account.FieldOauthBillingMode:
+		return m.OldOauthBillingMode(ctx)
 	case account.FieldStatus:
 		return m.OldStatus(ctx)
 	case account.FieldErrorMessage:
@@ -4572,6 +4616,13 @@ func (m *AccountMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetOauthSettlementCost(v)
+		return nil
+	case account.FieldOauthBillingMode:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOauthBillingMode(v)
 		return nil
 	case account.FieldStatus:
 		v, ok := value.(string)
@@ -4967,6 +5018,9 @@ func (m *AccountMutation) ResetField(name string) error {
 		return nil
 	case account.FieldOauthSettlementCost:
 		m.ResetOauthSettlementCost()
+		return nil
+	case account.FieldOauthBillingMode:
+		m.ResetOauthBillingMode()
 		return nil
 	case account.FieldStatus:
 		m.ResetStatus()

@@ -823,6 +823,8 @@ export default {
       billingRateMultiplier: 'Billing Rate Multiplier',
       billingRateMultiplierHint: '0 = free, affects account billing only',
       oauthSettlementCost: 'OAuth Account Settlement Cost (USD)',
+      oauthBillingMode: 'Enable OAuth Billing Mode',
+      oauthBillingModeHint: 'When enabled, deleting this API key account creates a one-time OAuth-style settlement record. Request-time user billing is unchanged.',
       perRequestPricing: {
         title: 'Enable Per-Request Pricing',
         hint: 'Records fixed account upstream cost by final upstream model. It does not affect user balance or channel billing. Models without a price cannot use this account.',

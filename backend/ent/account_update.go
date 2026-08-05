@@ -295,6 +295,20 @@ func (_u *AccountUpdate) ClearOauthSettlementCost() *AccountUpdate {
 	return _u
 }
 
+// SetOauthBillingMode sets the "oauth_billing_mode" field.
+func (_u *AccountUpdate) SetOauthBillingMode(v bool) *AccountUpdate {
+	_u.mutation.SetOauthBillingMode(v)
+	return _u
+}
+
+// SetNillableOauthBillingMode sets the "oauth_billing_mode" field if the given value is not nil.
+func (_u *AccountUpdate) SetNillableOauthBillingMode(v *bool) *AccountUpdate {
+	if v != nil {
+		_u.SetOauthBillingMode(*v)
+	}
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *AccountUpdate) SetStatus(v string) *AccountUpdate {
 	_u.mutation.SetStatus(v)
@@ -904,6 +918,9 @@ func (_u *AccountUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.OauthSettlementCostCleared() {
 		_spec.ClearField(account.FieldOauthSettlementCost, field.TypeFloat64)
 	}
+	if value, ok := _u.mutation.OauthBillingMode(); ok {
+		_spec.SetField(account.FieldOauthBillingMode, field.TypeBool, value)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(account.FieldStatus, field.TypeString, value)
 	}
@@ -1468,6 +1485,20 @@ func (_u *AccountUpdateOne) AddOauthSettlementCost(v float64) *AccountUpdateOne 
 // ClearOauthSettlementCost clears the value of the "oauth_settlement_cost" field.
 func (_u *AccountUpdateOne) ClearOauthSettlementCost() *AccountUpdateOne {
 	_u.mutation.ClearOauthSettlementCost()
+	return _u
+}
+
+// SetOauthBillingMode sets the "oauth_billing_mode" field.
+func (_u *AccountUpdateOne) SetOauthBillingMode(v bool) *AccountUpdateOne {
+	_u.mutation.SetOauthBillingMode(v)
+	return _u
+}
+
+// SetNillableOauthBillingMode sets the "oauth_billing_mode" field if the given value is not nil.
+func (_u *AccountUpdateOne) SetNillableOauthBillingMode(v *bool) *AccountUpdateOne {
+	if v != nil {
+		_u.SetOauthBillingMode(*v)
+	}
 	return _u
 }
 
@@ -2109,6 +2140,9 @@ func (_u *AccountUpdateOne) sqlSave(ctx context.Context) (_node *Account, err er
 	}
 	if _u.mutation.OauthSettlementCostCleared() {
 		_spec.ClearField(account.FieldOauthSettlementCost, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.OauthBillingMode(); ok {
+		_spec.SetField(account.FieldOauthBillingMode, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(account.FieldStatus, field.TypeString, value)

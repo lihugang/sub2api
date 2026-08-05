@@ -878,6 +878,8 @@ export default {
       billingRateMultiplier: '账号计费倍率',
       billingRateMultiplierHint: '0 表示不计费，仅影响账号计费',
       oauthSettlementCost: 'OAuth 账号结算成本 (USD)',
+      oauthBillingMode: '启用 OAuth 计费模式',
+      oauthBillingModeHint: '启用后，删除此 API Key 账号时按 OAuth 账号方式生成一次性结算流水；不影响请求期间的用户扣费。',
       perRequestPricing: {
         title: '启用按次计费',
         hint: '按最终上游模型记录账号单次成本；不影响用户余额和渠道计费。未配置价格的模型不能使用此账号。',

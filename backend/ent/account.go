@@ -51,6 +51,8 @@ type Account struct {
 	RateMultiplier float64 `json:"rate_multiplier,omitempty"`
 	// OauthSettlementCost holds the value of the "oauth_settlement_cost" field.
 	OauthSettlementCost *float64 `json:"oauth_settlement_cost,omitempty"`
+	// OauthBillingMode holds the value of the "oauth_billing_mode" field.
+	OauthBillingMode bool `json:"oauth_billing_mode,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
 	// ErrorMessage holds the value of the "error_message" field.
@@ -173,7 +175,7 @@ func (*Account) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case account.FieldCredentials, account.FieldExtra:
 			values[i] = new([]byte)
-		case account.FieldAutoPauseOnExpired, account.FieldSchedulable:
+		case account.FieldOauthBillingMode, account.FieldAutoPauseOnExpired, account.FieldSchedulable:
 			values[i] = new(sql.NullBool)
 		case account.FieldRateMultiplier, account.FieldOauthSettlementCost:
 			values[i] = new(sql.NullFloat64)
@@ -309,6 +311,12 @@ func (_m *Account) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.OauthSettlementCost = new(float64)
 				*_m.OauthSettlementCost = value.Float64
+			}
+		case account.FieldOauthBillingMode:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field oauth_billing_mode", values[i])
+			} else if value.Valid {
+				_m.OauthBillingMode = value.Bool
 			}
 		case account.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -543,6 +551,9 @@ func (_m *Account) String() string {
 		builder.WriteString("oauth_settlement_cost=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("oauth_billing_mode=")
+	builder.WriteString(fmt.Sprintf("%v", _m.OauthBillingMode))
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)

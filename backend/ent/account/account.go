@@ -48,6 +48,8 @@ const (
 	FieldRateMultiplier = "rate_multiplier"
 	// FieldOauthSettlementCost holds the string denoting the oauth_settlement_cost field in the database.
 	FieldOauthSettlementCost = "oauth_settlement_cost"
+	// FieldOauthBillingMode holds the string denoting the oauth_billing_mode field in the database.
+	FieldOauthBillingMode = "oauth_billing_mode"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// FieldErrorMessage holds the string denoting the error_message field in the database.
@@ -149,6 +151,7 @@ var Columns = []string{
 	FieldPriority,
 	FieldRateMultiplier,
 	FieldOauthSettlementCost,
+	FieldOauthBillingMode,
 	FieldStatus,
 	FieldErrorMessage,
 	FieldLastUsedAt,
@@ -213,6 +216,8 @@ var (
 	DefaultPriority int
 	// DefaultRateMultiplier holds the default value on creation for the "rate_multiplier" field.
 	DefaultRateMultiplier float64
+	// DefaultOauthBillingMode holds the default value on creation for the "oauth_billing_mode" field.
+	DefaultOauthBillingMode bool
 	// DefaultStatus holds the default value on creation for the "status" field.
 	DefaultStatus string
 	// StatusValidator is a validator for the "status" field. It is called by the builders before save.
@@ -327,6 +332,11 @@ func ByRateMultiplier(opts ...sql.OrderTermOption) OrderOption {
 // ByOauthSettlementCost orders the results by the oauth_settlement_cost field.
 func ByOauthSettlementCost(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOauthSettlementCost, opts...).ToFunc()
+}
+
+// ByOauthBillingMode orders the results by the oauth_billing_mode field.
+func ByOauthBillingMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOauthBillingMode, opts...).ToFunc()
 }
 
 // ByStatus orders the results by the status field.

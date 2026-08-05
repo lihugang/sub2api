@@ -1448,6 +1448,19 @@
           <label class="input-label">{{ t('admin.accounts.oauthSettlementCost') }}</label>
           <input v-model.number="form.oauth_settlement_cost" type="number" min="0" step="0.0000000001" class="input" />
         </div>
+        <div v-if="account.type === 'apikey'" class="col-span-full border-t border-gray-200 pt-4 dark:border-dark-600">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <label class="input-label mb-0">{{ t('admin.accounts.oauthBillingMode') }}</label>
+              <p class="input-hint">{{ t('admin.accounts.oauthBillingModeHint') }}</p>
+            </div>
+            <Toggle v-model="oauthBillingMode" :aria-label="t('admin.accounts.oauthBillingMode')" />
+          </div>
+          <div v-if="oauthBillingMode" class="mt-3">
+            <label class="input-label">{{ t('admin.accounts.oauthSettlementCost') }}</label>
+            <input v-model.number="form.oauth_settlement_cost" type="number" min="0" step="0.0000000001" required class="input" />
+          </div>
+        </div>
       </div>
       <div class="border-t border-gray-200 pt-4 dark:border-dark-600">
         <label class="input-label">{{ t('admin.accounts.expiresAt') }}</label>
@@ -3230,6 +3243,7 @@ const form = reactive({
   group_ids: [] as number[],
   expires_at: null as number | null
 })
+const oauthBillingMode = ref(false)
 
 const statusOptions = computed(() => {
   const options = [
@@ -3316,6 +3330,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   form.priority = newAccount.priority
   form.rate_multiplier = newAccount.rate_multiplier ?? 1
   form.oauth_settlement_cost = newAccount.oauth_settlement_cost ?? null
+  oauthBillingMode.value = newAccount.type === 'oauth' || newAccount.oauth_billing_mode === true
   form.status = (newAccount.status === 'active' || newAccount.status === 'inactive' || newAccount.status === 'error')
     ? newAccount.status
     : 'active'
@@ -4134,8 +4149,13 @@ const handleSubmit = async () => {
     updatePayload.auto_pause_on_expired = autoPauseOnExpired.value
     if (props.account.type === 'oauth') {
       updatePayload.rate_multiplier = 0
+      updatePayload.oauth_billing_mode = true
+    } else if (props.account.type === 'apikey') {
+      updatePayload.oauth_billing_mode = oauthBillingMode.value
+      if (!oauthBillingMode.value) updatePayload.oauth_settlement_cost = null
     } else {
       delete updatePayload.oauth_settlement_cost
+      updatePayload.oauth_billing_mode = false
     }
 
     // For apikey type, handle credentials update

@@ -199,6 +199,7 @@ type Account struct {
 	Priority                int                            `json:"priority"`
 	RateMultiplier          float64                        `json:"rate_multiplier"`
 	OAuthSettlementCost     *float64                       `json:"oauth_settlement_cost,omitempty"`
+	OAuthBillingMode        bool                           `json:"oauth_billing_mode"`
 	Status                  string                         `json:"status"`
 	ErrorMessage            string                         `json:"error_message"`
 	LastUsedAt              *time.Time                     `json:"last_used_at"`

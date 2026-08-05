@@ -209,6 +209,20 @@ func (_c *AccountCreate) SetNillableOauthSettlementCost(v *float64) *AccountCrea
 	return _c
 }
 
+// SetOauthBillingMode sets the "oauth_billing_mode" field.
+func (_c *AccountCreate) SetOauthBillingMode(v bool) *AccountCreate {
+	_c.mutation.SetOauthBillingMode(v)
+	return _c
+}
+
+// SetNillableOauthBillingMode sets the "oauth_billing_mode" field if the given value is not nil.
+func (_c *AccountCreate) SetNillableOauthBillingMode(v *bool) *AccountCreate {
+	if v != nil {
+		_c.SetOauthBillingMode(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *AccountCreate) SetStatus(v string) *AccountCreate {
 	_c.mutation.SetStatus(v)
@@ -579,6 +593,10 @@ func (_c *AccountCreate) defaults() error {
 		v := account.DefaultRateMultiplier
 		_c.mutation.SetRateMultiplier(v)
 	}
+	if _, ok := _c.mutation.OauthBillingMode(); !ok {
+		v := account.DefaultOauthBillingMode
+		_c.mutation.SetOauthBillingMode(v)
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := account.DefaultStatus
 		_c.mutation.SetStatus(v)
@@ -644,6 +662,9 @@ func (_c *AccountCreate) check() error {
 	}
 	if _, ok := _c.mutation.RateMultiplier(); !ok {
 		return &ValidationError{Name: "rate_multiplier", err: errors.New(`ent: missing required field "Account.rate_multiplier"`)}
+	}
+	if _, ok := _c.mutation.OauthBillingMode(); !ok {
+		return &ValidationError{Name: "oauth_billing_mode", err: errors.New(`ent: missing required field "Account.oauth_billing_mode"`)}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Account.status"`)}
@@ -758,6 +779,10 @@ func (_c *AccountCreate) createSpec() (*Account, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.OauthSettlementCost(); ok {
 		_spec.SetField(account.FieldOauthSettlementCost, field.TypeFloat64, value)
 		_node.OauthSettlementCost = &value
+	}
+	if value, ok := _c.mutation.OauthBillingMode(); ok {
+		_spec.SetField(account.FieldOauthBillingMode, field.TypeBool, value)
+		_node.OauthBillingMode = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(account.FieldStatus, field.TypeString, value)
@@ -1206,6 +1231,18 @@ func (u *AccountUpsert) AddOauthSettlementCost(v float64) *AccountUpsert {
 // ClearOauthSettlementCost clears the value of the "oauth_settlement_cost" field.
 func (u *AccountUpsert) ClearOauthSettlementCost() *AccountUpsert {
 	u.SetNull(account.FieldOauthSettlementCost)
+	return u
+}
+
+// SetOauthBillingMode sets the "oauth_billing_mode" field.
+func (u *AccountUpsert) SetOauthBillingMode(v bool) *AccountUpsert {
+	u.Set(account.FieldOauthBillingMode, v)
+	return u
+}
+
+// UpdateOauthBillingMode sets the "oauth_billing_mode" field to the value that was provided on create.
+func (u *AccountUpsert) UpdateOauthBillingMode() *AccountUpsert {
+	u.SetExcluded(account.FieldOauthBillingMode)
 	return u
 }
 
@@ -1809,6 +1846,20 @@ func (u *AccountUpsertOne) UpdateOauthSettlementCost() *AccountUpsertOne {
 func (u *AccountUpsertOne) ClearOauthSettlementCost() *AccountUpsertOne {
 	return u.Update(func(s *AccountUpsert) {
 		s.ClearOauthSettlementCost()
+	})
+}
+
+// SetOauthBillingMode sets the "oauth_billing_mode" field.
+func (u *AccountUpsertOne) SetOauthBillingMode(v bool) *AccountUpsertOne {
+	return u.Update(func(s *AccountUpsert) {
+		s.SetOauthBillingMode(v)
+	})
+}
+
+// UpdateOauthBillingMode sets the "oauth_billing_mode" field to the value that was provided on create.
+func (u *AccountUpsertOne) UpdateOauthBillingMode() *AccountUpsertOne {
+	return u.Update(func(s *AccountUpsert) {
+		s.UpdateOauthBillingMode()
 	})
 }
 
@@ -2622,6 +2673,20 @@ func (u *AccountUpsertBulk) UpdateOauthSettlementCost() *AccountUpsertBulk {
 func (u *AccountUpsertBulk) ClearOauthSettlementCost() *AccountUpsertBulk {
 	return u.Update(func(s *AccountUpsert) {
 		s.ClearOauthSettlementCost()
+	})
+}
+
+// SetOauthBillingMode sets the "oauth_billing_mode" field.
+func (u *AccountUpsertBulk) SetOauthBillingMode(v bool) *AccountUpsertBulk {
+	return u.Update(func(s *AccountUpsert) {
+		s.SetOauthBillingMode(v)
+	})
+}
+
+// UpdateOauthBillingMode sets the "oauth_billing_mode" field to the value that was provided on create.
+func (u *AccountUpsertBulk) UpdateOauthBillingMode() *AccountUpsertBulk {
+	return u.Update(func(s *AccountUpsert) {
+		s.UpdateOauthBillingMode()
 	})
 }
 

@@ -302,6 +302,7 @@ func (s *adminServiceImpl) DuplicateAccount(ctx context.Context, id int64, actor
 		Priority:              source.Priority,
 		RateMultiplier:        cloneAccountValuePointer(source.RateMultiplier),
 		OAuthSettlementCost:   cloneAccountValuePointer(source.OAuthSettlementCost),
+		OAuthBillingMode:      boolPtr(source.OAuthBillingMode),
 		LoadFactor:            cloneAccountValuePointer(source.LoadFactor),
 		GroupIDs:              groupIDs,
 		ExpiresAt:             expiresAt,
@@ -464,17 +465,18 @@ func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]an
 	delete(accountExtra, OllamaCloudUsageAutoRefreshExtraKey)
 	delete(accountExtra, OllamaCloudUsageSnapshotExtraKey)
 	account := &Account{
-		Name:        input.Name,
-		Notes:       normalizeAccountNotes(input.Notes),
-		Platform:    input.Platform,
-		Type:        input.Type,
-		Credentials: input.Credentials,
-		Extra:       accountExtra,
-		ProxyID:     input.ProxyID,
-		Concurrency: normalizeAccountConcurrency(input.Platform, input.Type, input.Concurrency),
-		Priority:    input.Priority,
-		Status:      StatusActive,
-		Schedulable: true,
+		Name:             input.Name,
+		Notes:            normalizeAccountNotes(input.Notes),
+		Platform:         input.Platform,
+		Type:             input.Type,
+		Credentials:      input.Credentials,
+		Extra:            accountExtra,
+		ProxyID:          input.ProxyID,
+		Concurrency:      normalizeAccountConcurrency(input.Platform, input.Type, input.Concurrency),
+		Priority:         input.Priority,
+		Status:           StatusActive,
+		Schedulable:      true,
+		OAuthBillingMode: input.Type == AccountTypeOAuth || (input.Type == AccountTypeAPIKey && input.OAuthBillingMode != nil && *input.OAuthBillingMode),
 	}
 	ApplyUpstreamBillingProbeNamePolicy(account)
 	// 预计算固定时间重置的下次重置时间
@@ -494,6 +496,18 @@ func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]an
 	} else {
 		account.AutoPauseOnExpired = true
 	}
+	if input.OAuthBillingMode != nil {
+		if account.Type == AccountTypeOAuth {
+			account.OAuthBillingMode = true
+		} else if account.Type == AccountTypeAPIKey {
+			account.OAuthBillingMode = *input.OAuthBillingMode
+		} else if *input.OAuthBillingMode {
+			return nil, errors.New("oauth_billing_mode is only supported for oauth or apikey accounts")
+		}
+	}
+	if account.Type != AccountTypeOAuth && account.Type != AccountTypeAPIKey {
+		account.OAuthBillingMode = false
+	}
 	if account.Type == AccountTypeOAuth {
 		zero := 0.0
 		account.RateMultiplier = &zero
@@ -504,13 +518,16 @@ func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]an
 		account.RateMultiplier = input.RateMultiplier
 	}
 	if input.OAuthSettlementCost != nil {
-		if account.Type != AccountTypeOAuth {
-			return nil, errors.New("oauth_settlement_cost is only supported for oauth accounts")
+		if account.Type != AccountTypeOAuth && !(account.Type == AccountTypeAPIKey && account.OAuthBillingMode) {
+			return nil, errors.New("oauth_settlement_cost is only supported for oauth accounts or API keys with OAuth billing mode")
 		}
 		if *input.OAuthSettlementCost < 0 || math.IsNaN(*input.OAuthSettlementCost) || math.IsInf(*input.OAuthSettlementCost, 0) {
 			return nil, errors.New("oauth_settlement_cost must be a non-negative finite number")
 		}
 		account.OAuthSettlementCost = input.OAuthSettlementCost
+	}
+	if account.Type == AccountTypeAPIKey && account.OAuthBillingMode && input.OAuthSettlementCost == nil {
+		return nil, errors.New("oauth_settlement_cost is required when oauth_billing_mode is enabled")
 	}
 	if input.LoadFactor != nil && *input.LoadFactor > 0 {
 		if *input.LoadFactor > 10000 {
@@ -761,6 +778,18 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 	if input.Priority != nil {
 		account.Priority = *input.Priority
 	}
+	if input.OAuthBillingMode != nil {
+		if account.Type == AccountTypeOAuth {
+			account.OAuthBillingMode = true
+		} else if account.Type == AccountTypeAPIKey {
+			account.OAuthBillingMode = *input.OAuthBillingMode
+		} else if *input.OAuthBillingMode {
+			return nil, errors.New("oauth_billing_mode is only supported for oauth or apikey accounts")
+		}
+	}
+	if account.Type != AccountTypeOAuth && account.Type != AccountTypeAPIKey {
+		account.OAuthBillingMode = false
+	}
 	if account.Type == AccountTypeOAuth {
 		zero := 0.0
 		account.RateMultiplier = &zero
@@ -771,13 +800,18 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 		account.RateMultiplier = input.RateMultiplier
 	}
 	if input.OAuthSettlementCost != nil {
-		if account.Type != AccountTypeOAuth {
-			return nil, errors.New("oauth_settlement_cost is only supported for oauth accounts")
+		if account.Type != AccountTypeOAuth && !(account.Type == AccountTypeAPIKey && account.OAuthBillingMode) {
+			return nil, errors.New("oauth_settlement_cost is only supported for oauth accounts or API keys with OAuth billing mode")
 		}
 		if *input.OAuthSettlementCost < 0 || math.IsNaN(*input.OAuthSettlementCost) || math.IsInf(*input.OAuthSettlementCost, 0) {
 			return nil, errors.New("oauth_settlement_cost must be a non-negative finite number")
 		}
 		account.OAuthSettlementCost = input.OAuthSettlementCost
+	} else if account.Type == AccountTypeAPIKey && !account.OAuthBillingMode {
+		account.OAuthSettlementCost = nil
+	}
+	if account.Type == AccountTypeAPIKey && account.OAuthBillingMode && input.OAuthSettlementCost == nil && account.OAuthSettlementCost == nil {
+		return nil, errors.New("oauth_settlement_cost is required when oauth_billing_mode is enabled")
 	}
 	if input.LoadFactor != nil {
 		if *input.LoadFactor <= 0 {
@@ -1158,7 +1192,7 @@ func (s *adminServiceImpl) DeleteAccount(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	if account.Type == AccountTypeOAuth && account.ParentAccountID == nil && account.OAuthSettlementCost != nil && *account.OAuthSettlementCost > 0 {
+	if (account.Type == AccountTypeOAuth || (account.Type == AccountTypeAPIKey && account.OAuthBillingMode)) && account.ParentAccountID == nil && account.OAuthSettlementCost != nil && *account.OAuthSettlementCost > 0 {
 		return s.deleteOAuthAccountWithSettlement(ctx, id)
 	}
 	return s.deleteAccountCascade(ctx, id)
@@ -1227,12 +1261,13 @@ func (s *adminServiceImpl) deleteOAuthAccountWithSettlement(ctx context.Context,
 
 func lockedOAuthSettlementCost(ctx context.Context, client *dbent.Client, accountID int64) (float64, error) {
 	var (
-		accountType string
-		parentID    sql.NullInt64
-		cost        sql.NullFloat64
+		accountType      string
+		parentID         sql.NullInt64
+		cost             sql.NullFloat64
+		oauthBillingMode bool
 	)
 	rows, err := client.QueryContext(ctx, `
-		SELECT type, parent_account_id, oauth_settlement_cost
+		SELECT type, parent_account_id, oauth_settlement_cost, oauth_billing_mode
 		FROM accounts
 		WHERE id = $1 AND deleted_at IS NULL
 		FOR UPDATE
@@ -1247,10 +1282,10 @@ func lockedOAuthSettlementCost(ctx context.Context, client *dbent.Client, accoun
 		}
 		return 0, ErrAccountNotFound
 	}
-	if err := rows.Scan(&accountType, &parentID, &cost); err != nil {
+	if err := rows.Scan(&accountType, &parentID, &cost, &oauthBillingMode); err != nil {
 		return 0, fmt.Errorf("lock oauth account for settlement: %w", err)
 	}
-	if accountType != AccountTypeOAuth || parentID.Valid || !cost.Valid || cost.Float64 <= 0 {
+	if (accountType != AccountTypeOAuth && !(accountType == AccountTypeAPIKey && oauthBillingMode)) || parentID.Valid || !cost.Valid || cost.Float64 <= 0 {
 		return 0, nil
 	}
 	return cost.Float64, nil

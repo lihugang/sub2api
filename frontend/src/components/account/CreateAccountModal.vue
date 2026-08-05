@@ -2731,6 +2731,19 @@
           <label class="input-label">{{ t('admin.accounts.oauthSettlementCost') }}</label>
           <input v-model.number="form.oauth_settlement_cost" type="number" min="0" step="0.0000000001" class="input" />
         </div>
+        <div v-if="form.type === 'apikey'" class="col-span-full border-t border-gray-200 pt-4 dark:border-dark-600">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <label class="input-label mb-0">{{ t('admin.accounts.oauthBillingMode') }}</label>
+              <p class="input-hint">{{ t('admin.accounts.oauthBillingModeHint') }}</p>
+            </div>
+            <Toggle v-model="oauthBillingMode" :aria-label="t('admin.accounts.oauthBillingMode')" />
+          </div>
+          <div v-if="oauthBillingMode" class="mt-3">
+            <label class="input-label">{{ t('admin.accounts.oauthSettlementCost') }}</label>
+            <input v-model.number="form.oauth_settlement_cost" type="number" min="0" step="0.0000000001" required class="input" />
+          </div>
+        </div>
       </div>
       <div class="border-t border-gray-200 pt-4 dark:border-dark-600">
         <label class="input-label">{{ t('admin.accounts.expiresAt') }}</label>
@@ -3520,6 +3533,7 @@ import type {
   OpenAIEndpointCapability
 } from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import Toggle from '@/components/common/Toggle.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
@@ -4054,6 +4068,7 @@ const form = reactive({
   group_ids: [] as number[],
   expires_at: null as number | null
 })
+const oauthBillingMode = ref(false)
 
 // Helper to check if current type needs OAuth flow
 const isOAuthFlow = computed(() => {
@@ -4591,6 +4606,7 @@ const resetForm = () => {
   form.priority = 1
   form.rate_multiplier = 1
   form.oauth_settlement_cost = null
+  oauthBillingMode.value = false
   form.group_ids = []
   form.expires_at = null
   accountCategory.value = 'oauth-based'
@@ -5221,6 +5237,8 @@ const createAccountAndFinish = async (
     load_factor: form.load_factor ?? undefined,
     priority: form.priority,
     rate_multiplier: form.rate_multiplier,
+    oauth_billing_mode: type === 'apikey' ? oauthBillingMode.value : undefined,
+    oauth_settlement_cost: type === 'apikey' && oauthBillingMode.value ? (form.oauth_settlement_cost ?? undefined) : undefined,
     group_ids: form.group_ids,
     expires_at: form.expires_at,
     auto_pause_on_expired: autoPauseOnExpired.value

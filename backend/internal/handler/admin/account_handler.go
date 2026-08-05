@@ -131,6 +131,7 @@ type CreateAccountRequest struct {
 	Priority                int            `json:"priority"`
 	RateMultiplier          *float64       `json:"rate_multiplier"`
 	OAuthSettlementCost     *float64       `json:"oauth_settlement_cost"`
+	OAuthBillingMode        *bool          `json:"oauth_billing_mode"`
 	LoadFactor              *int           `json:"load_factor"`
 	GroupIDs                []int64        `json:"group_ids"`
 	ExpiresAt               *int64         `json:"expires_at"`
@@ -152,6 +153,7 @@ type UpdateAccountRequest struct {
 	Priority                *int           `json:"priority"`
 	RateMultiplier          *float64       `json:"rate_multiplier"`
 	OAuthSettlementCost     *float64       `json:"oauth_settlement_cost"`
+	OAuthBillingMode        *bool          `json:"oauth_billing_mode"`
 	LoadFactor              *int           `json:"load_factor"`
 	Status                  string         `json:"status" binding:"omitempty,oneof=active inactive error"`
 	GroupIDs                *[]int64       `json:"group_ids"`
@@ -935,6 +937,7 @@ func (h *AccountHandler) Create(c *gin.Context) {
 			Priority:              req.Priority,
 			RateMultiplier:        req.RateMultiplier,
 			OAuthSettlementCost:   req.OAuthSettlementCost,
+			OAuthBillingMode:      req.OAuthBillingMode,
 			LoadFactor:            req.LoadFactor,
 			GroupIDs:              req.GroupIDs,
 			ExpiresAt:             req.ExpiresAt,
@@ -1070,6 +1073,7 @@ func (h *AccountHandler) Update(c *gin.Context) {
 		Priority:              req.Priority,    // 指针类型，nil 表示未提供
 		RateMultiplier:        req.RateMultiplier,
 		OAuthSettlementCost:   req.OAuthSettlementCost,
+		OAuthBillingMode:      req.OAuthBillingMode,
 		LoadFactor:            req.LoadFactor,
 		Status:                req.Status,
 		GroupIDs:              req.GroupIDs,

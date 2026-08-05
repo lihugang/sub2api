@@ -130,14 +130,16 @@ type Account struct {
 	// OAuthSettlementCost is a one-time upstream cost allocated as admin-only
 	// account accounting when an OAuth primary account is deleted.
 	OAuthSettlementCost *float64
-	LoadFactor          *int // 调度负载因子；nil 表示使用 Concurrency
-	Status              string
-	ErrorMessage        string
-	LastUsedAt          *time.Time
-	ExpiresAt           *time.Time
-	AutoPauseOnExpired  bool
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	// OAuthBillingMode enables OAuth-style deletion settlement for API key accounts.
+	OAuthBillingMode   bool
+	LoadFactor         *int // 调度负载因子；nil 表示使用 Concurrency
+	Status             string
+	ErrorMessage       string
+	LastUsedAt         *time.Time
+	ExpiresAt          *time.Time
+	AutoPauseOnExpired bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 
 	Schedulable bool
 
