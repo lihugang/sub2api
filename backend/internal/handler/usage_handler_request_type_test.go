@@ -174,7 +174,7 @@ func TestUserUsageListAllowsVideoBillingMode(t *testing.T) {
 	require.Equal(t, "video", repo.listFilters.BillingMode)
 }
 
-func TestUserUsageListKeepsUserBillingAndIPWithoutAdminCostFields(t *testing.T) {
+func TestUserUsageListKeepsUserBillingIPAndAccountCostFields(t *testing.T) {
 	ipAddress := "203.0.113.10"
 	upstreamModel := "upstream-private-model"
 	billingTier := "internal-tier"
@@ -220,9 +220,9 @@ func TestUserUsageListKeepsUserBillingAndIPWithoutAdminCostFields(t *testing.T) 
 	require.Contains(t, body, `"actual_cost":0.08`)
 	require.Contains(t, body, `"rate_multiplier":0.8`)
 	require.Contains(t, body, `"ip_address":"203.0.113.10"`)
+	require.Contains(t, body, `"account_rate_multiplier":1.7`)
+	require.Contains(t, body, `"account_stats_cost":0.12`)
 	require.NotContains(t, body, "upstream_endpoint")
-	require.NotContains(t, body, "account_rate_multiplier")
-	require.NotContains(t, body, "account_stats_cost")
 	require.NotContains(t, body, "upstream_model")
 	require.NotContains(t, body, "billing_tier")
 	require.NotContains(t, body, "channel_id")
@@ -259,12 +259,12 @@ func TestUserUsageStatsUsesScopedFilters(t *testing.T) {
 	require.Equal(t, "token", repo.statsFilters.BillingMode)
 	require.Contains(t, rec.Body.String(), `"total_cost":0.1`)
 	require.Contains(t, rec.Body.String(), `"total_actual_cost":0.08`)
-	require.NotContains(t, rec.Body.String(), "total_account_cost")
+	require.Contains(t, rec.Body.String(), `"total_account_cost":0.12`)
 	require.NotContains(t, rec.Body.String(), "upstream_endpoints")
 	require.NotContains(t, rec.Body.String(), "endpoint_paths")
 }
 
-func TestUserUsageDashboardModelsOmitsAccountCost(t *testing.T) {
+func TestUserUsageDashboardModelsIncludesAccountCost(t *testing.T) {
 	repo := &userUsageRepoCapture{
 		modelStats: []usagestats.ModelStat{{
 			Model:       "gpt-5",
@@ -285,7 +285,7 @@ func TestUserUsageDashboardModelsOmitsAccountCost(t *testing.T) {
 	body := rec.Body.String()
 	require.Contains(t, body, `"cost":0.1`)
 	require.Contains(t, body, `"actual_cost":0.08`)
-	require.NotContains(t, body, "account_cost")
+	require.Contains(t, body, `"account_cost":0.07`)
 }
 
 func TestUserUsageDashboardModelsRejectsAdminModelSources(t *testing.T) {
@@ -317,7 +317,8 @@ func TestUserUsageSnapshotUsesScopedFilters(t *testing.T) {
 	require.Equal(t, int16(service.RequestTypeStream), *repo.trendFilters.RequestType)
 	require.Equal(t, int64(42), repo.groupFilters.UserID)
 	require.Equal(t, int64(11), repo.groupFilters.GroupID)
-	require.NotContains(t, rec.Body.String(), "account_cost")
+	require.Contains(t, rec.Body.String(), `"account_cost":0.07`)
+	require.Contains(t, rec.Body.String(), `"account_cost":0.06`)
 }
 
 func TestUserUsageSnapshotRejectsInvalidIncludeFlags(t *testing.T) {

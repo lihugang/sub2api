@@ -1584,6 +1584,8 @@ export interface UsageLog {
   actual_cost: number
   rate_multiplier: number
   long_context_billing_applied: boolean
+  account_rate_multiplier?: number | null
+  account_stats_cost?: number | null
   billing_type: number
 
   request_type?: UsageRequestType
@@ -1780,6 +1782,7 @@ export interface UsageStatsResponse {
   total_tokens: number
   total_cost: number // 标准计费
   total_actual_cost: number // 实际扣除
+  total_account_cost?: number // 账号成本（平台实际成本）
   average_duration_ms: number
   models?: Record<string, number>
   endpoints?: EndpointStat[]

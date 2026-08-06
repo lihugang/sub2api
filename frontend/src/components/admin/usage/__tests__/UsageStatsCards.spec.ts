@@ -63,5 +63,6 @@ describe('UsageStatsCards', () => {
     expect(text).toContain('12')
     expect(text).toContain('Cache Read')
     expect(text).toContain('22')
+    expect(text).toContain('Cost $0.0010')
   })
 })

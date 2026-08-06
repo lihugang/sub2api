@@ -132,7 +132,7 @@ func TestUsageLogFromService_UsesRequestedModelAndKeepsUpstreamAdminOnly(t *test
 	require.Contains(t, string(adminJSON), `"upstream_model":"claude-sonnet-4-20250514"`)
 }
 
-func TestUsageLogFromService_KeepsUserBillingAndIPWithoutAdminCostFields(t *testing.T) {
+func TestUsageLogFromService_KeepsUserBillingIPAndAccountCostFields(t *testing.T) {
 	t.Parallel()
 
 	ipAddress := "203.0.113.10"
@@ -161,14 +161,18 @@ func TestUsageLogFromService_KeepsUserBillingAndIPWithoutAdminCostFields(t *test
 	require.Equal(t, 0.10, userDTO.TotalCost)
 	require.Equal(t, 0.08, userDTO.ActualCost)
 	require.Equal(t, 0.8, userDTO.RateMultiplier)
+	require.NotNil(t, userDTO.AccountRateMultiplier)
+	require.Equal(t, 1.5, *userDTO.AccountRateMultiplier)
+	require.NotNil(t, userDTO.AccountStatsCost)
+	require.Equal(t, 0.21, *userDTO.AccountStatsCost)
 	require.NotNil(t, userDTO.IPAddress)
 	require.Equal(t, ipAddress, *userDTO.IPAddress)
 
 	userJSON, err := json.Marshal(userDTO)
 	require.NoError(t, err)
-	require.NotContains(t, string(userJSON), "account_rate_multiplier")
-	require.NotContains(t, string(userJSON), "account_stats_cost")
-	require.NotContains(t, string(userJSON), "account_cost")
+	require.Contains(t, string(userJSON), `"account_rate_multiplier":1.5`)
+	require.Contains(t, string(userJSON), `"account_stats_cost":0.21`)
+	require.NotContains(t, string(userJSON), `"account":{`)
 }
 
 func TestUsageLogFromService_FallsBackToLegacyModelWhenRequestedModelMissing(t *testing.T) {

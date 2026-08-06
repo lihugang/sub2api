@@ -502,6 +502,11 @@ type UsageLog struct {
 	RateMultiplier            float64 `json:"rate_multiplier"`
 	LongContextBillingApplied bool    `json:"long_context_billing_applied"`
 
+	// AccountRateMultiplier 账号计费倍率快照（nil 表示按 1.0 处理）
+	AccountRateMultiplier *float64 `json:"account_rate_multiplier,omitempty"`
+	// AccountStatsCost 自定义定价规则计算的账号统计费用（nil 表示使用默认公式）
+	AccountStatsCost *float64 `json:"account_stats_cost,omitempty"`
+
 	BillingType  int8   `json:"billing_type"`
 	RequestType  string `json:"request_type"`
 	Stream       bool   `json:"stream"`

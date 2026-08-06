@@ -95,6 +95,16 @@ vi.mock('vue-i18n', async () => {
 
 const simpleStub = { template: '<div><slot /></div>' }
 const chartStub = { template: '<div />' }
+const usageStatsCardsStub = {
+  name: 'UsageStatsCardsStub',
+  props: ['stats', 'showAccountCost', 'strikeStandardCost'],
+  template: '<div />',
+}
+const usageTableStub = {
+  name: 'UsageTableStub',
+  props: ['data', 'loading', 'columns', 'showAccountBilling', 'showUpstreamEndpoint'],
+  template: '<div />',
+}
 
 const usageLog = {
   id: 1,
@@ -102,6 +112,8 @@ const usageLog = {
   actual_cost: 0.092883,
   total_cost: 0.092883,
   rate_multiplier: 1,
+  account_rate_multiplier: 1.7,
+  account_stats_cost: 0.12,
   service_tier: 'priority',
   input_cost: 0.020285,
   output_cost: 0.00303,
@@ -136,8 +148,8 @@ function mountUsageView() {
         Select: true,
         DateRangePicker: true,
         Icon: true,
-        UsageStatsCards: chartStub,
-        UsageTable: chartStub,
+        UsageStatsCards: usageStatsCardsStub,
+        UsageTable: usageTableStub,
         ModelDistributionChart: chartStub,
         GroupDistributionChart: chartStub,
         EndpointDistributionChart: chartStub,
@@ -169,6 +181,7 @@ describe('user UsageView', () => {
       total_tokens: 30,
       total_cost: 0.1,
       total_actual_cost: 0.08,
+      total_account_cost: 0.012,
       average_duration_ms: 12,
       endpoints: [],
       upstream_endpoints: [],
@@ -205,6 +218,20 @@ describe('user UsageView', () => {
     }))
     expect(list).toHaveBeenCalledWith(1, 100)
     expect(getAvailable).toHaveBeenCalled()
+  })
+
+  it('enables account cost display on stats cards and usage table', async () => {
+    const wrapper = mountUsageView()
+    await flushPromises()
+
+    const statsCards = wrapper.findComponent(usageStatsCardsStub)
+    expect(statsCards.exists()).toBe(true)
+    expect(statsCards.props('showAccountCost')).toBe(true)
+    expect(statsCards.props('strikeStandardCost')).toBe(true)
+
+    const table = wrapper.findComponent(usageTableStub)
+    expect(table.exists()).toBe(true)
+    expect(table.props('showAccountBilling')).toBe(true)
   })
 
   it('exports csv with current filters and without admin-only fields', async () => {

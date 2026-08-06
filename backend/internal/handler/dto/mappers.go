@@ -621,7 +621,8 @@ func AccountSummaryFromService(a *service.Account) *AccountSummary {
 }
 
 func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
-	// 普通用户 DTO：严禁包含管理员字段（例如 account_rate_multiplier、account、upstream_model）。
+	// 普通用户 DTO：不包含管理员内部字段（例如 account、upstream_model、channel_id、billing_tier）。
+	// 账号计费倍率与账号统计费用（account_rate_multiplier / account_stats_cost）对普通用户可见，用于展示账号成本。
 	requestType := l.EffectiveRequestType()
 	stream, openAIWSMode := service.ApplyLegacyRequestFields(requestType, l.Stream, l.OpenAIWSMode)
 	requestedModel := l.RequestedModel
@@ -654,6 +655,8 @@ func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 		ActualCost:                l.ActualCost,
 		RateMultiplier:            l.RateMultiplier,
 		LongContextBillingApplied: l.LongContextBillingApplied,
+		AccountRateMultiplier:     l.AccountRateMultiplier,
+		AccountStatsCost:          l.AccountStatsCost,
 		BillingType:               l.BillingType,
 		RequestType:               requestType.String(),
 		Stream:                    stream,

@@ -33,6 +33,7 @@ type userModelStat struct {
 	TotalTokens         int64   `json:"total_tokens"`
 	Cost                float64 `json:"cost"`
 	ActualCost          float64 `json:"actual_cost"`
+	AccountCost         float64 `json:"account_cost"`
 }
 
 type userGroupStat struct {
@@ -42,6 +43,7 @@ type userGroupStat struct {
 	TotalTokens int64   `json:"total_tokens"`
 	Cost        float64 `json:"cost"`
 	ActualCost  float64 `json:"actual_cost"`
+	AccountCost float64 `json:"account_cost"`
 }
 
 // UsageHandler handles usage-related requests
@@ -406,7 +408,6 @@ func (h *UsageHandler) Stats(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	stats.TotalAccountCost = nil
 	stats.UpstreamEndpoints = nil
 	stats.EndpointPaths = nil
 
@@ -577,6 +578,7 @@ func userModelStatsFromUsageStats(stats []usagestats.ModelStat) []userModelStat 
 			TotalTokens:         stat.TotalTokens,
 			Cost:                stat.Cost,
 			ActualCost:          stat.ActualCost,
+			AccountCost:         stat.AccountCost,
 		})
 	}
 	return out
@@ -592,6 +594,7 @@ func userGroupStatsFromUsageStats(stats []usagestats.GroupStat) []userGroupStat 
 			TotalTokens: stat.TotalTokens,
 			Cost:        stat.Cost,
 			ActualCost:  stat.ActualCost,
+			AccountCost: stat.AccountCost,
 		})
 	}
 	return out
