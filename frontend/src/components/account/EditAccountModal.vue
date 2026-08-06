@@ -4204,8 +4204,6 @@ const handleSubmit = async () => {
       updatePayload.oauth_billing_mode = false
     }
 
-    }
-
     // For apikey type, handle credentials update
     if (props.account.type === 'apikey') {
       const currentCredentials = (props.account.credentials as Record<string, unknown>) || {}
