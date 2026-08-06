@@ -268,6 +268,31 @@ func (s *AccountRepoSuite) TestDelete() {
 	s.Require().Error(err, "expected error after delete")
 }
 
+func (s *AccountRepoSuite) TestDelete_ReusesContextTransaction() {
+	// The settlement delete path starts an outer transaction with a base client
+	// and passes its transaction only through context. Ensure Delete reuses that
+	// transaction instead of waiting on its own FOR UPDATE lock.
+	tx, err := integrationEntClient.Tx(s.ctx)
+	s.Require().NoError(err)
+	defer func() { _ = tx.Rollback() }()
+
+	account := mustCreateAccount(s.T(), tx.Client(), &service.Account{Name: "to-delete-context-tx"})
+	repo := newAccountRepositoryWithSQL(integrationEntClient, integrationDB, nil)
+	txCtx := dbent.NewTxContext(s.ctx, tx)
+	var lockedID int64
+	rows, err := tx.QueryContext(txCtx, "SELECT id FROM accounts WHERE id = $1 FOR UPDATE", account.ID)
+	s.Require().NoError(err)
+	s.Require().True(rows.Next())
+	s.Require().NoError(rows.Scan(&lockedID))
+	s.Require().NoError(rows.Close())
+	s.Require().Equal(account.ID, lockedID)
+
+	s.Require().NoError(repo.Delete(txCtx, account.ID))
+
+	_, err = tx.Client().Account.Get(txCtx, account.ID)
+	s.Require().Error(err, "expected account to be hidden inside context transaction")
+}
+
 func (s *AccountRepoSuite) TestDelete_RemovesSchedulerAccountSnapshot() {
 	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "to-delete-cache"})
 	cacheRecorder := &schedulerCacheRecorder{
