@@ -1469,8 +1469,15 @@ func normalizeOpenAIReasoningEffort(raw string) string {
 	}
 }
 
+// isDeepSeekModel 判断是否 DeepSeek 系列模型；入参可为原始模型名
+// （含大小写/路径变体），与 thinking 协议等处的厂商前缀判定保持一致。
+func isDeepSeekModel(model string) bool {
+	return strings.HasPrefix(strings.ToLower(lastOpenAIModelSegment(model)), "deepseek-")
+}
+
 func normalizeOpenAIReasoningEffortForModel(raw, model string) string {
-	if strings.EqualFold(strings.TrimSpace(raw), "max") && isOpenAIGPT56Model(model) {
+	if strings.EqualFold(strings.TrimSpace(raw), "max") &&
+		(isOpenAIGPT56Model(model) || isDeepSeekModel(model)) {
 		return "max"
 	}
 	return normalizeOpenAIReasoningEffort(raw)
