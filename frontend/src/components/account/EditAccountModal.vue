@@ -1748,24 +1748,6 @@
       </div>
 
 
-      <div
-        v-if="account?.type === 'apikey'"
-        class="flex items-center justify-between gap-4 border-t border-gray-200 pt-4 dark:border-dark-600"
-      >
-        <div>
-          <label class="input-label mb-0">{{ t('admin.accounts.upstreamBilling.autoProbe') }}</label>
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            {{ t('admin.accounts.upstreamBilling.autoProbeHint') }}
-          </p>
-        </div>
-        <Toggle
-          :model-value="upstreamBillingAutoProbeEnabled"
-          data-testid="upstream-billing-auto-probe"
-          :aria-label="t('admin.accounts.upstreamBilling.autoProbe')"
-          @update:model-value="handleUpstreamBillingAutoProbeChange"
-        />
-      </div>
-
       <OllamaCloudUsageSettings
         v-if="account?.ollama_cloud_usage?.eligible"
         :account="account"
@@ -2929,7 +2911,6 @@ const autoPause7dDisabled = ref(false)
 const accountPerRequestPricingEnabled = ref(false)
 const accountPerRequestPrices = ref<AccountPerRequestPriceForm[]>([])
 const accountPerRequestPricingError = ref('')
-const upstreamBillingAutoProbeEnabled = ref(false)
 const upstreamBillingRateSyncEnabled = ref(false)
 
 const mixedScheduling = ref(false) // For antigravity accounts: enable mixed scheduling
@@ -3337,16 +3318,6 @@ const oauthBillingMode = ref(false)
 
 const handleUpstreamBillingRateSyncChange = (enabled: boolean) => {
   upstreamBillingRateSyncEnabled.value = enabled
-  if (enabled) {
-    upstreamBillingAutoProbeEnabled.value = true
-  }
-}
-
-const handleUpstreamBillingAutoProbeChange = (enabled: boolean) => {
-  upstreamBillingAutoProbeEnabled.value = enabled
-  if (!enabled) {
-    upstreamBillingRateSyncEnabled.value = false
-  }
 }
 
 const statusOptions = computed(() => {
@@ -3474,9 +3445,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
 	      .map(([model, price]) => ({ model, price: price as number }))
 	  : []
 	accountPerRequestPricingError.value = ''
-	upstreamBillingAutoProbeEnabled.value = extra?.upstream_billing_probe_enabled === true
-	upstreamBillingRateSyncEnabled.value =
-		upstreamBillingAutoProbeEnabled.value && extra?.upstream_billing_rate_sync_enabled === true
+	upstreamBillingRateSyncEnabled.value = extra?.upstream_billing_rate_sync_enabled === true
 
 
   // Load OpenAI passthrough toggle (OpenAI OAuth/SetupToken/API Key)
@@ -4264,7 +4233,6 @@ const handleSubmit = async () => {
     } else if (props.account.type === 'apikey') {
       updatePayload.oauth_billing_mode = oauthBillingMode.value
       if (!oauthBillingMode.value) updatePayload.oauth_settlement_cost = null
-      updatePayload.upstream_billing_probe_enabled = upstreamBillingAutoProbeEnabled.value
       updatePayload.upstream_billing_rate_sync_enabled = upstreamBillingRateSyncEnabled.value
       if (upstreamBillingRateSyncEnabled.value) {
         delete updatePayload.rate_multiplier
