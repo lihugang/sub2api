@@ -899,10 +899,6 @@ func (h *AccountHandler) Create(c *gin.Context) {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
 	}
-	if req.ProbeEnabled != nil {
-		response.BadRequest(c, "upstream_billing_probe_enabled is managed by the account name")
-		return
-	}
 	if err := service.ValidateOpenAILongContextBillingExtra(req.Platform, req.Extra); err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -1043,10 +1039,6 @@ func (h *AccountHandler) Update(c *gin.Context) {
 	var req UpdateAccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Invalid request: "+err.Error())
-		return
-	}
-	if req.ProbeEnabled != nil {
-		response.BadRequest(c, "upstream_billing_probe_enabled is managed by the account name")
 		return
 	}
 	if req.RateMultiplier != nil && *req.RateMultiplier < 0 {
