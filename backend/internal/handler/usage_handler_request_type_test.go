@@ -224,6 +224,8 @@ func TestUserUsageListKeepsUserBillingIPAndAccountCostFields(t *testing.T) {
 	require.Contains(t, body, `"account_stats_cost":0.12`)
 	require.NotContains(t, body, "upstream_endpoint")
 	require.NotContains(t, body, "upstream_model")
+	require.NotContains(t, body, "upstream_response_model")
+	require.NotContains(t, body, "upstream_model_mismatch")
 	require.NotContains(t, body, "billing_tier")
 	require.NotContains(t, body, "channel_id")
 	require.NotContains(t, body, `"account":`)
