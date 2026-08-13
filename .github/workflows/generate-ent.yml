@@ -1,0 +1,41 @@
+name: Generate Ent Artifacts
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate backend/ent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          check-latest: false
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Verify Go version
+        run: go version | grep -q 'go1.26.5'
+
+      - name: Generate Ent code
+        working-directory: backend
+        run: go generate ./ent
+
+      - name: Archive generated Ent code
+        run: tar -czf ent-generated.tar.gz -C backend ent
+
+      - name: Upload generated Ent artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ent-generated-${{ github.sha }}
+          path: ent-generated.tar.gz
+          if-no-files-found: error
+          retention-days: 14
