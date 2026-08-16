@@ -1195,6 +1195,10 @@ export interface Account {
   cache_ttl_override_enabled?: boolean | null
   cache_ttl_override_target?: string | null
 
+  // Anthropic API Key synthetic 5m prompt-cache usage.
+  mock_cache_enabled?: boolean | null
+  mock_cache_target_percent?: number | null
+
   // 自定义 Base URL 中继转发（仅 Anthropic OAuth/SetupToken 账号有效）
   custom_base_url_enabled?: boolean | null
   custom_base_url?: string | null

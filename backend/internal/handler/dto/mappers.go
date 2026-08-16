@@ -331,6 +331,12 @@ func AccountFromServiceShallow(a *service.Account) *Account {
 			}
 		}
 	}
+	if a.Platform == service.PlatformAnthropic && a.Type == service.AccountTypeAPIKey {
+		enabled := a.IsAnthropicMockCacheEnabled()
+		out.MockCacheEnabled = &enabled
+		target := a.GetAnthropicMockCacheTargetPercent()
+		out.MockCacheTargetPercent = &target
+	}
 
 	// 提取账号配额限制（apikey / bedrock 类型有效）
 	if a.IsAPIKeyOrBedrock() {

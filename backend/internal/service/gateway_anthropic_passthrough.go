@@ -91,6 +91,7 @@ func (s *GatewayService) forwardAnthropicAPIKeyPassthroughWithInput(
 			return nil, err
 		}
 	}
+	ctx = withClaudeMockCacheRequest(ctx, input.Parsed)
 
 	var resp *http.Response
 	retryStart := time.Now()
@@ -539,6 +540,11 @@ func (s *GatewayService) handleStreamingResponseAnthropicAPIKeyPassthrough(
 			if data, ok := extractAnthropicSSEDataLine(line); ok {
 				trimmed := strings.TrimSpace(data)
 				observer.ObserveAnthropic([]byte(trimmed))
+				if updated, changed := rewriteClaudeMockCacheSSEData(ctx, account, model, data, s.claudeMockCache); changed {
+					data = updated
+					trimmed = strings.TrimSpace(updated)
+					line = "data: " + updated
+				}
 				if anthropicStreamEventIsTerminal("", trimmed) {
 					sawTerminalEvent = true
 				}
@@ -803,6 +809,10 @@ func (s *GatewayService) handleNonStreamingResponseAnthropicAPIKeyPassthrough(
 	}
 
 	usage := parseClaudeUsageFromResponseBody(body)
+	if updated, changed := rewriteClaudeMockCacheUsageBytes(ctx, account, claudeMockCacheModelFromContext(ctx), body, s.claudeMockCache); changed {
+		body = updated
+		usage = parseClaudeUsageFromResponseBody(body)
+	}
 	if IsForceCacheBilling(ctx) && usage.InputTokens > 0 {
 		body, err = classifyAnthropicResponseInputAsCacheRead(body, usage)
 		if err != nil {

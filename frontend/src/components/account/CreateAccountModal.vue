@@ -2870,6 +2870,40 @@
       >
         <div class="flex items-center justify-between gap-4">
           <div>
+            <label class="input-label mb-0">{{ t('admin.accounts.anthropic.mockCache') }}</label>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('admin.accounts.anthropic.mockCacheDesc') }}
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="mockCacheEnabled = !mockCacheEnabled"
+            :class="[
+              'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
+              mockCacheEnabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-dark-600'
+            ]"
+          >
+            <span
+              :class="[
+                'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                mockCacheEnabled ? 'translate-x-5' : 'translate-x-0'
+              ]"
+            />
+          </button>
+        </div>
+        <div v-if="mockCacheEnabled" class="mt-3">
+          <label class="input-label text-xs">{{ t('admin.accounts.anthropic.mockCacheTarget') }}</label>
+          <input v-model.number="mockCacheTargetPercent" type="number" min="1" max="99" step="1" class="input mt-1" />
+          <p class="input-hint">{{ t('admin.accounts.anthropic.mockCacheTargetHint') }}</p>
+        </div>
+      </div>
+
+      <div
+        v-if="form.platform === 'anthropic' && accountCategory === 'apikey'"
+        class="border-t border-gray-200 pt-4 dark:border-dark-600"
+      >
+        <div class="flex items-center justify-between gap-4">
+          <div>
             <label class="input-label mb-0">{{ t('admin.accounts.anthropic.apiKeyAuthScheme') }}</label>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.anthropic.apiKeyAuthSchemeDesc') }}
@@ -3853,6 +3887,8 @@ const anthropicPassthroughEnabled = ref(false)
 const anthropicAPIKeyAuthScheme = ref<AnthropicAPIKeyAuthScheme>('x_api_key')
 const webSearchEmulationMode = ref('default')
 const webSearchGlobalEnabled = ref(false)
+const mockCacheEnabled = ref(false)
+const mockCacheTargetPercent = ref(91)
 
 const toggleOpenAILongContextBilling = () => {
   openAILongContextBillingEnabled.value = !openAILongContextBillingEnabled.value
@@ -4304,6 +4340,8 @@ watch(
       anthropicPassthroughEnabled.value = false
       anthropicAPIKeyAuthScheme.value = 'x_api_key'
       webSearchEmulationMode.value = 'default'
+      mockCacheEnabled.value = false
+      mockCacheTargetPercent.value = 91
     }
     // 请求头覆写为平台相关配置（常用头集合不同），切换平台时清空，
     // 避免上一平台的配置行被提交到新平台账号
@@ -4333,6 +4371,8 @@ watch(
       anthropicPassthroughEnabled.value = false
       anthropicAPIKeyAuthScheme.value = 'x_api_key'
       webSearchEmulationMode.value = 'default'
+      mockCacheEnabled.value = false
+      mockCacheTargetPercent.value = 91
     }
   }
 )
@@ -4725,6 +4765,8 @@ const resetForm = () => {
   anthropicPassthroughEnabled.value = false
   anthropicAPIKeyAuthScheme.value = 'x_api_key'
   webSearchEmulationMode.value = 'default'
+  mockCacheEnabled.value = false
+  mockCacheTargetPercent.value = 91
   // Reset quota control state
   windowCostEnabled.value = false
   windowCostLimit.value = null
@@ -4868,6 +4910,13 @@ const buildAnthropicExtra = (base?: Record<string, unknown>): Record<string, unk
     delete extra.web_search_emulation
   } else {
     extra.web_search_emulation = webSearchEmulationMode.value
+  }
+  if (mockCacheEnabled.value) {
+    extra.mock_cache_enabled = true
+    extra.mock_cache_target_percent = Math.min(99, Math.max(1, Math.round(mockCacheTargetPercent.value || 91)))
+  } else {
+    delete extra.mock_cache_enabled
+    delete extra.mock_cache_target_percent
   }
 
   return Object.keys(extra).length > 0 ? extra : undefined

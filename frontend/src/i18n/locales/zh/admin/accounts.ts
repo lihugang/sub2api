@@ -773,6 +773,12 @@ export default {
         webSearchDefault: '默认',
         webSearchEnabled: '开启',
         webSearchDisabled: '关闭',
+        mockCache: '模拟 5 分钟 Prompt Cache',
+        mockCacheDesc:
+          '仅对带有 ephemeral cache_control 的 Claude 请求生效。首次前缀记为缓存创建，5 分钟内重复前缀可记为缓存读取；响应、计费和用量日志会保持一致。',
+        mockCacheTarget: '目标缓存率 (%)',
+        mockCacheTargetHint:
+          '默认 91%。系统按客户端缓存断点计算自然命中率：低于目标时保持自然结果，不会强行伪造命中；高于目标时才平滑调低。'
       },
       modelRestriction: '模型限制（可选）',
       modelWhitelist: '模型白名单',

@@ -17,6 +17,59 @@ import (
 const stickySessionPrefix = "sticky_session:"
 const liveCallPrefix = "live:call:"
 
+var claudeMockCacheClassifyScript = redis.NewScript(`
+local stats_key = KEYS[1]
+local target = tonumber(ARGV[1])
+local request_total = tonumber(ARGV[2])
+local prefix_ttl = tonumber(ARGV[3])
+local stats_ttl = tonumber(ARGV[4])
+local current_natural_read = tonumber(redis.call('HGET', stats_key, 'natural_read') or '0')
+local current_reported_read = tonumber(redis.call('HGET', stats_key, 'reported_read') or redis.call('HGET', stats_key, 'read') or '0')
+local current_total = tonumber(redis.call('HGET', stats_key, 'total') or '0')
+local final_total = current_total + request_total
+local eligible = {}
+local natural_read_delta = 0
+local read_delta = 0
+local creation_delta = 0
+
+for i = 2, #KEYS do
+  local tokens = tonumber(ARGV[i + 3])
+  eligible[i] = redis.call('EXISTS', KEYS[i]) == 1
+  if eligible[i] then
+    natural_read_delta = natural_read_delta + tokens
+  end
+end
+
+local natural_rate_at_or_below_target =
+  (current_natural_read + natural_read_delta) * 10000 <= target * final_total
+
+for i = 2, #KEYS do
+  local tokens = tonumber(ARGV[i + 3])
+  local hit = false
+  if eligible[i] and final_total > 0 then
+    if natural_rate_at_or_below_target then
+      hit = true
+    else
+      local hit_error = math.abs((current_reported_read + read_delta + tokens) * 10000 - target * final_total)
+      local miss_error = math.abs((current_reported_read + read_delta) * 10000 - target * final_total)
+      hit = hit_error <= miss_error
+    end
+  end
+  if hit then
+    read_delta = read_delta + tokens
+  else
+    creation_delta = creation_delta + tokens
+  end
+  redis.call('SET', KEYS[i], '1', 'EX', prefix_ttl)
+end
+
+redis.call('HINCRBY', stats_key, 'natural_read', natural_read_delta)
+redis.call('HINCRBY', stats_key, 'reported_read', read_delta)
+redis.call('HINCRBY', stats_key, 'total', request_total)
+redis.call('EXPIRE', stats_key, stats_ttl)
+return {read_delta, creation_delta}
+`)
+
 type gatewayCache struct {
 	rdb *redis.Client
 }
@@ -24,6 +77,34 @@ type gatewayCache struct {
 func NewGatewayCache(rdb *redis.Client) service.GatewayCache {
 	return &gatewayCache{rdb: rdb}
 }
+
+func (c *gatewayCache) ClassifyClaudeMockCache(ctx context.Context, req service.ClaudeMockCacheClassifyRequest) (service.ClaudeMockCacheClassifyResult, error) {
+	if c == nil || c.rdb == nil {
+		return service.ClaudeMockCacheClassifyResult{}, errors.New("gateway cache unavailable")
+	}
+	statsKey := fmt.Sprintf("claude_mock_cache:{%d}:hour:%d", req.AccountID, req.HourBucket)
+	keys := make([]string, 1, len(req.Prefixes)+1)
+	keys[0] = statsKey
+	args := make([]any, 0, len(req.Prefixes)+4)
+	args = append(args, req.TargetBasisPts, req.TotalTokens, int(req.PrefixTTL.Seconds()), int(req.StatsTTL.Seconds()))
+	for _, prefix := range req.Prefixes {
+		keys = append(keys, fmt.Sprintf("claude_mock_cache:{%d}:prefix:%s", req.AccountID, prefix.Hash))
+		args = append(args, prefix.Tokens)
+	}
+	values, err := claudeMockCacheClassifyScript.Run(ctx, c.rdb, keys, args...).Int64Slice()
+	if err != nil {
+		return service.ClaudeMockCacheClassifyResult{}, err
+	}
+	if len(values) != 2 {
+		return service.ClaudeMockCacheClassifyResult{}, fmt.Errorf("unexpected mock cache result length: %d", len(values))
+	}
+	return service.ClaudeMockCacheClassifyResult{
+		CacheReadTokens:     int(values[0]),
+		CacheCreationTokens: int(values[1]),
+	}, nil
+}
+
+var _ service.ClaudeMockCacheStore = (*gatewayCache)(nil)
 
 // buildSessionKey 构建 session key，包含 groupID 实现分组隔离
 // 格式: sticky_session:{groupID}:{sessionHash}

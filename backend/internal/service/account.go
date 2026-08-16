@@ -2043,6 +2043,43 @@ func (a *Account) IsAnthropicAPIKeyPassthroughEnabled() bool {
 	return ok && enabled
 }
 
+const defaultAnthropicMockCacheTargetPercent = 91
+
+// IsAnthropicMockCacheEnabled reports whether synthetic 5-minute prompt-cache
+// usage is enabled for an Anthropic API key upstream.
+func (a *Account) IsAnthropicMockCacheEnabled() bool {
+	if a == nil || a.Platform != PlatformAnthropic || a.Type != AccountTypeAPIKey || a.Extra == nil {
+		return false
+	}
+	enabled, ok := a.Extra["mock_cache_enabled"].(bool)
+	return ok && enabled
+}
+
+// GetAnthropicMockCacheTargetPercent returns the configured hourly base target.
+// Invalid or missing values fall back to 91 percent.
+func (a *Account) GetAnthropicMockCacheTargetPercent() int {
+	if a == nil || a.Extra == nil {
+		return defaultAnthropicMockCacheTargetPercent
+	}
+	var target int
+	switch value := a.Extra["mock_cache_target_percent"].(type) {
+	case int:
+		target = value
+	case int64:
+		target = int(value)
+	case float64:
+		target = int(math.Round(value))
+	case json.Number:
+		if parsed, err := strconv.Atoi(value.String()); err == nil {
+			target = parsed
+		}
+	}
+	if target < 1 || target > 99 {
+		return defaultAnthropicMockCacheTargetPercent
+	}
+	return target
+}
+
 // WebSearch 模拟三态常量
 const (
 	WebSearchModeDefault  = "default"  // 跟随渠道配置

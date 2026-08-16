@@ -314,6 +314,10 @@ func (s *adminServiceImpl) DuplicateAccount(ctx context.Context, id int64, actor
 	if err != nil {
 		return nil, fmt.Errorf("normalize duplicate account extra: %w", err)
 	}
+	accountExtra, err = normalizeAnthropicMockCacheExtra(input.Platform, input.Type, accountExtra)
+	if err != nil {
+		return nil, fmt.Errorf("normalize duplicate account mock cache extra: %w", err)
+	}
 	if err := NormalizeHeaderOverrideCredentials(input.Credentials); err != nil {
 		return nil, err
 	}
@@ -395,6 +399,52 @@ func normalizeOpenAILongContextBillingUpdateExtra(account *Account, input *Updat
 		if hasCurrent {
 			normalized[openAILongContextBillingEnabledKey] = current
 		}
+	}
+	return normalized, nil
+}
+
+func normalizeAnthropicMockCacheExtra(platform, accountType string, extra map[string]any) (map[string]any, error) {
+	normalized := maps.Clone(extra)
+	if normalized == nil {
+		normalized = make(map[string]any, 2)
+	}
+	if platform != PlatformAnthropic || accountType != AccountTypeAPIKey {
+		delete(normalized, "mock_cache_enabled")
+		delete(normalized, "mock_cache_target_percent")
+		return normalized, nil
+	}
+	if raw, exists := normalized["mock_cache_enabled"]; exists {
+		if _, ok := raw.(bool); !ok {
+			return nil, infraerrors.BadRequest("ANTHROPIC_MOCK_CACHE_INVALID", "mock_cache_enabled must be a boolean")
+		}
+	}
+	if raw, exists := normalized["mock_cache_target_percent"]; exists {
+		target := 0
+		switch value := raw.(type) {
+		case int:
+			target = value
+		case int64:
+			target = int(value)
+		case float64:
+			if math.Trunc(value) != value {
+				return nil, infraerrors.BadRequest("ANTHROPIC_MOCK_CACHE_INVALID", "mock_cache_target_percent must be an integer between 1 and 99")
+			}
+			target = int(value)
+		case json.Number:
+			parsed, err := strconv.Atoi(value.String())
+			if err != nil {
+				return nil, infraerrors.BadRequest("ANTHROPIC_MOCK_CACHE_INVALID", "mock_cache_target_percent must be an integer between 1 and 99")
+			}
+			target = parsed
+		default:
+			return nil, infraerrors.BadRequest("ANTHROPIC_MOCK_CACHE_INVALID", "mock_cache_target_percent must be an integer between 1 and 99")
+		}
+		if target < 1 || target > 99 {
+			return nil, infraerrors.BadRequest("ANTHROPIC_MOCK_CACHE_INVALID", "mock_cache_target_percent must be an integer between 1 and 99")
+		}
+		normalized["mock_cache_target_percent"] = target
+	} else if enabled, _ := normalized["mock_cache_enabled"].(bool); enabled {
+		normalized["mock_cache_target_percent"] = defaultAnthropicMockCacheTargetPercent
 	}
 	return normalized, nil
 }
@@ -495,6 +545,10 @@ func (s *adminServiceImpl) CreateAccount(ctx context.Context, input *CreateAccou
 	if err != nil {
 		return nil, err
 	}
+	accountExtra, err = normalizeAnthropicMockCacheExtra(input.Platform, input.Type, accountExtra)
+	if err != nil {
+		return nil, err
+	}
 
 	// 绑定分组
 	groupIDs := input.GroupIDs
@@ -584,6 +638,10 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 			return nil, err
 		}
 		normalizedExtra, err = normalizeGrokMediaEligibilityUpdateExtra(account, input, normalizedExtra)
+		if err != nil {
+			return nil, err
+		}
+		normalizedExtra, err = normalizeAnthropicMockCacheExtra(account.Platform, account.Type, normalizedExtra)
 		if err != nil {
 			return nil, err
 		}

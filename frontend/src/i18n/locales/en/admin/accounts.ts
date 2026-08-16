@@ -704,6 +704,12 @@ export default {
         webSearchDefault: 'Default',
         webSearchEnabled: 'Enabled',
         webSearchDisabled: 'Disabled',
+        mockCache: 'Simulate 5-minute Prompt Cache',
+        mockCacheDesc:
+          'Applies only to Claude requests with ephemeral cache_control. New prefixes are reported as cache creation and matching prefixes within five minutes may be reported as cache reads. Client usage, billing, and usage logs stay aligned.',
+        mockCacheTarget: 'Target cache rate (%)',
+        mockCacheTargetHint:
+          'Defaults to 91%. The natural rate is derived from client cache breakpoints. Rates below the target are left unchanged; only rates above the target are reduced smoothly.'
       },
       modelRestriction: 'Model Restriction (Optional)',
       modelWhitelist: 'Model Whitelist',

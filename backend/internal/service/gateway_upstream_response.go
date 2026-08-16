@@ -942,6 +942,14 @@ func (s *GatewayService) handleStreamingResponse(ctx context.Context, resp *http
 			}
 		}
 
+		if eventType == "message_start" {
+			if msg, ok := event["message"].(map[string]any); ok {
+				if u, ok := msg["usage"].(map[string]any); ok {
+					eventChanged = rewriteClaudeMockCacheUsageMap(ctx, account, originalModel, u, s.claudeMockCache) || eventChanged
+				}
+			}
+		}
+
 		// Cache TTL Override: 重写 SSE 事件中的 cache_creation 分类。
 		// 账号级设置优先；全局 1h 请求注入开启时，默认把 usage 计费归回 5m。
 		if overrideTarget, ok := s.resolveCacheTTLUsageOverrideTarget(ctx, account); ok {
@@ -1416,6 +1424,12 @@ func (s *GatewayService) handleNonStreamingResponse(ctx context.Context, resp *h
 			if newBody, err := sjson.SetBytes(body, "usage.cache_read_input_tokens", cachedTokens); err == nil {
 				body = newBody
 			}
+		}
+	}
+
+	if s.applyClaudeMockCacheUsage(ctx, account, originalModel, &response.Usage) {
+		if updated, ok := rewriteClaudeUsageBytes(body, response.Usage); ok {
+			body = updated
 		}
 	}
 
