@@ -706,10 +706,7 @@ export default {
         webSearchDisabled: 'Disabled',
         mockCache: 'Simulate 5-minute Prompt Cache',
         mockCacheDesc:
-          'Applies only to Claude requests with ephemeral cache_control. New prefixes are reported as cache creation and matching prefixes within five minutes may be reported as cache reads. Client usage, billing, and usage logs stay aligned.',
-        mockCacheTarget: 'Target cache rate (%)',
-        mockCacheTargetHint:
-          'Defaults to 91%. The natural rate is derived from client cache breakpoints. Rates below the target are left unchanged; only rates above the target are reduced smoothly.'
+          'Uses the last four ephemeral cache checkpoints from each Claude request. Matching prefixes are cache reads, new or idle-for-five-minutes prefixes are cache writes, and each request has a 2% forced-miss chance. Client usage, billing, and usage logs stay aligned.'
       },
       modelRestriction: 'Model Restriction (Optional)',
       modelWhitelist: 'Model Whitelist',

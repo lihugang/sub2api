@@ -413,38 +413,14 @@ func normalizeAnthropicMockCacheExtra(platform, accountType string, extra map[st
 		delete(normalized, "mock_cache_target_percent")
 		return normalized, nil
 	}
+	// The former target percentage is intentionally ignored and removed. Mock
+	// cache classification now follows real request checkpoints and a fixed
+	// request-level miss rate.
+	delete(normalized, "mock_cache_target_percent")
 	if raw, exists := normalized["mock_cache_enabled"]; exists {
 		if _, ok := raw.(bool); !ok {
 			return nil, infraerrors.BadRequest("ANTHROPIC_MOCK_CACHE_INVALID", "mock_cache_enabled must be a boolean")
 		}
-	}
-	if raw, exists := normalized["mock_cache_target_percent"]; exists {
-		target := 0
-		switch value := raw.(type) {
-		case int:
-			target = value
-		case int64:
-			target = int(value)
-		case float64:
-			if math.Trunc(value) != value {
-				return nil, infraerrors.BadRequest("ANTHROPIC_MOCK_CACHE_INVALID", "mock_cache_target_percent must be an integer between 1 and 99")
-			}
-			target = int(value)
-		case json.Number:
-			parsed, err := strconv.Atoi(value.String())
-			if err != nil {
-				return nil, infraerrors.BadRequest("ANTHROPIC_MOCK_CACHE_INVALID", "mock_cache_target_percent must be an integer between 1 and 99")
-			}
-			target = parsed
-		default:
-			return nil, infraerrors.BadRequest("ANTHROPIC_MOCK_CACHE_INVALID", "mock_cache_target_percent must be an integer between 1 and 99")
-		}
-		if target < 1 || target > 99 {
-			return nil, infraerrors.BadRequest("ANTHROPIC_MOCK_CACHE_INVALID", "mock_cache_target_percent must be an integer between 1 and 99")
-		}
-		normalized["mock_cache_target_percent"] = target
-	} else if enabled, _ := normalized["mock_cache_enabled"].(bool); enabled {
-		normalized["mock_cache_target_percent"] = defaultAnthropicMockCacheTargetPercent
 	}
 	return normalized, nil
 }

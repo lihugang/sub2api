@@ -269,8 +269,7 @@ type Account struct {
 	CacheTTLOverrideTarget  *string `json:"cache_ttl_override_target,omitempty"`
 
 	// 无缓存 Anthropic API Key 上游的 5m Prompt Cache usage 模拟。
-	MockCacheEnabled       *bool `json:"mock_cache_enabled,omitempty"`
-	MockCacheTargetPercent *int  `json:"mock_cache_target_percent,omitempty"`
+	MockCacheEnabled *bool `json:"mock_cache_enabled,omitempty"`
 
 	// 自定义 Base URL 中继转发（仅 Anthropic OAuth/SetupToken 账号有效）
 	CustomBaseURLEnabled *bool   `json:"custom_base_url_enabled,omitempty"`

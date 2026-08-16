@@ -2891,11 +2891,6 @@
             />
           </button>
         </div>
-        <div v-if="mockCacheEnabled" class="mt-3">
-          <label class="input-label text-xs">{{ t('admin.accounts.anthropic.mockCacheTarget') }}</label>
-          <input v-model.number="mockCacheTargetPercent" type="number" min="1" max="99" step="1" class="input mt-1" />
-          <p class="input-hint">{{ t('admin.accounts.anthropic.mockCacheTargetHint') }}</p>
-        </div>
       </div>
 
       <div
@@ -3888,7 +3883,6 @@ const anthropicAPIKeyAuthScheme = ref<AnthropicAPIKeyAuthScheme>('x_api_key')
 const webSearchEmulationMode = ref('default')
 const webSearchGlobalEnabled = ref(false)
 const mockCacheEnabled = ref(false)
-const mockCacheTargetPercent = ref(91)
 
 const toggleOpenAILongContextBilling = () => {
   openAILongContextBillingEnabled.value = !openAILongContextBillingEnabled.value
@@ -4341,7 +4335,6 @@ watch(
       anthropicAPIKeyAuthScheme.value = 'x_api_key'
       webSearchEmulationMode.value = 'default'
       mockCacheEnabled.value = false
-      mockCacheTargetPercent.value = 91
     }
     // 请求头覆写为平台相关配置（常用头集合不同），切换平台时清空，
     // 避免上一平台的配置行被提交到新平台账号
@@ -4372,7 +4365,6 @@ watch(
       anthropicAPIKeyAuthScheme.value = 'x_api_key'
       webSearchEmulationMode.value = 'default'
       mockCacheEnabled.value = false
-      mockCacheTargetPercent.value = 91
     }
   }
 )
@@ -4766,7 +4758,6 @@ const resetForm = () => {
   anthropicAPIKeyAuthScheme.value = 'x_api_key'
   webSearchEmulationMode.value = 'default'
   mockCacheEnabled.value = false
-  mockCacheTargetPercent.value = 91
   // Reset quota control state
   windowCostEnabled.value = false
   windowCostLimit.value = null
@@ -4913,11 +4904,10 @@ const buildAnthropicExtra = (base?: Record<string, unknown>): Record<string, unk
   }
   if (mockCacheEnabled.value) {
     extra.mock_cache_enabled = true
-    extra.mock_cache_target_percent = Math.min(99, Math.max(1, Math.round(mockCacheTargetPercent.value || 91)))
   } else {
     delete extra.mock_cache_enabled
-    delete extra.mock_cache_target_percent
   }
+  delete extra.mock_cache_target_percent
 
   return Object.keys(extra).length > 0 ? extra : undefined
 }

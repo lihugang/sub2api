@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand/v2"
 	"strings"
 	"sync"
 	"time"
@@ -18,11 +18,9 @@ import (
 )
 
 const (
-	claudeMockCacheTTL          = 5 * time.Minute
-	claudeMockCacheHourStatsTTL = 2 * time.Hour
-	claudeMockCacheTargetSigma  = 2.0
-	claudeMockCacheMaxDeviation = 5.0
-	claudeMockCacheTargetScale  = 100
+	claudeMockCacheTTL            = 5 * time.Minute
+	claudeMockCacheMaxCheckpoints = 4
+	claudeMockCacheMissRate       = 0.02
 )
 
 type ClaudeMockCachePrefix struct {
@@ -31,13 +29,10 @@ type ClaudeMockCachePrefix struct {
 }
 
 type ClaudeMockCacheClassifyRequest struct {
-	AccountID      int64
-	HourBucket     int64
-	TargetBasisPts int
-	TotalTokens    int
-	PrefixTTL      time.Duration
-	StatsTTL       time.Duration
-	Prefixes       []ClaudeMockCachePrefix
+	AccountID int64
+	ForceMiss bool
+	PrefixTTL time.Duration
+	Prefixes  []ClaudeMockCachePrefix
 }
 
 type ClaudeMockCacheClassifyResult struct {
@@ -80,20 +75,13 @@ type claudeMockCacheMemoryPrefix struct {
 	expiresAt time.Time
 }
 
-type claudeMockCacheMemoryStats struct {
-	naturalReadTokens  int64
-	reportedReadTokens int64
-	totalTokens        int64
-	expiresAt          time.Time
-}
-
 type claudeMockCacheSimulator struct {
 	store ClaudeMockCacheStore
 	now   func() time.Time
+	miss  func() bool
 
 	mu       sync.Mutex
 	prefixes map[string]claudeMockCacheMemoryPrefix
-	stats    map[string]claudeMockCacheMemoryStats
 }
 
 func newClaudeMockCacheSimulator(cache GatewayCache) *claudeMockCacheSimulator {
@@ -101,8 +89,8 @@ func newClaudeMockCacheSimulator(cache GatewayCache) *claudeMockCacheSimulator {
 	return &claudeMockCacheSimulator{
 		store:    store,
 		now:      time.Now,
+		miss:     func() bool { return rand.Float64() < claudeMockCacheMissRate },
 		prefixes: make(map[string]claudeMockCacheMemoryPrefix),
-		stats:    make(map[string]claudeMockCacheMemoryStats),
 	}
 }
 
@@ -114,17 +102,17 @@ func (s *claudeMockCacheSimulator) apply(ctx context.Context, account *Account, 
 		return false
 	}
 	prefixes := analyzeClaudeMockCachePrefixes(parsed, model, usage.InputTokens)
+	if len(prefixes) == 0 {
+		return false
+	}
 
 	now := s.now()
-	target := claudeMockCacheTargetBasisPoints(account.ID, account.GetAnthropicMockCacheTargetPercent(), now)
+	forceMiss := s.miss != nil && s.miss()
 	req := ClaudeMockCacheClassifyRequest{
-		AccountID:      account.ID,
-		HourBucket:     now.Unix() / int64(time.Hour/time.Second),
-		TargetBasisPts: target,
-		TotalTokens:    usage.InputTokens,
-		PrefixTTL:      claudeMockCacheTTL,
-		StatsTTL:       claudeMockCacheHourStatsTTL,
-		Prefixes:       prefixes,
+		AccountID: account.ID,
+		ForceMiss: forceMiss,
+		PrefixTTL: claudeMockCacheTTL,
+		Prefixes:  prefixes,
 	}
 
 	result, err := s.classify(ctx, req, now)
@@ -145,10 +133,11 @@ func (s *claudeMockCacheSimulator) apply(ctx context.Context, account *Account, 
 	usage.CacheCreation1hTokens = 0
 	logger.LegacyPrintf(
 		"service.gateway",
-		"mock_claude_cache_usage: account=%d model=%s target_bps=%d input:%d->%d cache_read=%d cache_creation_5m=%d",
+		"mock_claude_cache_usage: account=%d model=%s checkpoints=%d force_miss=%t input:%d->%d cache_read=%d cache_creation_5m=%d",
 		account.ID,
 		model,
-		target,
+		len(prefixes),
+		forceMiss,
 		before,
 		usage.InputTokens,
 		usage.CacheReadInputTokens,
@@ -294,44 +283,20 @@ func (s *claudeMockCacheSimulator) classifyMemory(req ClaudeMockCacheClassifyReq
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	statsKey := fmt.Sprintf("%d:%d", req.AccountID, req.HourBucket)
-	stats := s.stats[statsKey]
-	if !stats.expiresAt.IsZero() && !stats.expiresAt.After(now) {
-		stats = claudeMockCacheMemoryStats{}
-	}
-	finalTotal := stats.totalTokens + int64(req.TotalTokens)
 	result := ClaudeMockCacheClassifyResult{}
-	eligible := make([]bool, len(req.Prefixes))
-	naturalReadDelta := int64(0)
-	for i, prefix := range req.Prefixes {
+	for _, prefix := range req.Prefixes {
 		if prefix.Tokens <= 0 || prefix.Hash == "" {
 			continue
 		}
 		key := fmt.Sprintf("%d:%s", req.AccountID, prefix.Hash)
 		entry, exists := s.prefixes[key]
-		eligible[i] = exists && entry.expiresAt.After(now)
-		if eligible[i] {
-			naturalReadDelta += int64(prefix.Tokens)
-		}
-	}
-	naturalRateAtOrBelowTarget := (stats.naturalReadTokens+naturalReadDelta)*10000 <= int64(req.TargetBasisPts)*finalTotal
-	for i, prefix := range req.Prefixes {
-		if prefix.Tokens <= 0 || prefix.Hash == "" {
-			continue
-		}
-		key := fmt.Sprintf("%d:%s", req.AccountID, prefix.Hash)
-		if eligible[i] && (naturalRateAtOrBelowTarget || mockCacheHitCloser(stats.reportedReadTokens+int64(result.CacheReadTokens), int64(prefix.Tokens), finalTotal, req.TargetBasisPts)) {
+		if !req.ForceMiss && exists && entry.expiresAt.After(now) {
 			result.CacheReadTokens += prefix.Tokens
 		} else {
 			result.CacheCreationTokens += prefix.Tokens
 		}
 		s.prefixes[key] = claudeMockCacheMemoryPrefix{expiresAt: now.Add(req.PrefixTTL)}
 	}
-	stats.naturalReadTokens += naturalReadDelta
-	stats.reportedReadTokens += int64(result.CacheReadTokens)
-	stats.totalTokens = finalTotal
-	stats.expiresAt = now.Add(req.StatsTTL)
-	s.stats[statsKey] = stats
 	s.pruneMemory(now)
 	return result
 }
@@ -344,29 +309,6 @@ func (s *claudeMockCacheSimulator) pruneMemory(now time.Time) {
 			}
 		}
 	}
-	if len(s.stats) > 256 {
-		for key, entry := range s.stats {
-			if !entry.expiresAt.After(now) {
-				delete(s.stats, key)
-			}
-		}
-	}
-}
-
-func mockCacheHitCloser(currentRead, candidateRead, finalTotal int64, targetBasisPts int) bool {
-	if finalTotal <= 0 {
-		return false
-	}
-	hitError := absInt64((currentRead+candidateRead)*10000 - int64(targetBasisPts)*finalTotal)
-	missError := absInt64(currentRead*10000 - int64(targetBasisPts)*finalTotal)
-	return hitError <= missError
-}
-
-func absInt64(v int64) int64 {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 func isClaudeMockCacheModel(model string) bool {
@@ -377,56 +319,6 @@ func isClaudeMockCacheModel(model string) bool {
 func claudeUsageHasCacheTokens(usage ClaudeUsage) bool {
 	return usage.CacheReadInputTokens > 0 || usage.CacheCreationInputTokens > 0 ||
 		usage.CacheCreation5mTokens > 0 || usage.CacheCreation1hTokens > 0
-}
-
-func claudeMockCacheTargetBasisPoints(accountID int64, configured int, now time.Time) int {
-	hourBucket := now.Unix() / int64(time.Hour/time.Second)
-	hourSeed := claudeMockCacheSeed(accountID, hourBucket, -1)
-	offset := int(hourSeed%3) - 1
-	hourTarget := float64(configured + offset)
-
-	secondsIntoHour := now.Unix() % int64(time.Hour/time.Second)
-	if secondsIntoHour < 0 {
-		secondsIntoHour += int64(time.Hour / time.Second)
-	}
-	slot := secondsIntoHour / int64(5*time.Minute/time.Second)
-	fraction := float64(secondsIntoHour%int64(5*time.Minute/time.Second)) / float64(5*time.Minute/time.Second)
-	left := claudeMockCacheGaussian(accountID, hourBucket, slot)
-	rightHourBucket := hourBucket
-	rightSlot := slot + 1
-	if rightSlot >= int64(time.Hour/(5*time.Minute)) {
-		rightHourBucket++
-		rightSlot = 0
-	}
-	right := claudeMockCacheGaussian(accountID, rightHourBucket, rightSlot)
-	deviation := left + (right-left)*fraction
-	target := hourTarget + deviation
-	if target < 1 {
-		target = 1
-	}
-	if target > 99 {
-		target = 99
-	}
-	return int(math.Round(target * claudeMockCacheTargetScale))
-}
-
-func claudeMockCacheGaussian(accountID, hourBucket, slot int64) float64 {
-	seedA := claudeMockCacheSeed(accountID, hourBucket, slot*2)
-	seedB := claudeMockCacheSeed(accountID, hourBucket, slot*2+1)
-	u1 := (float64(seedA) + 1) / (float64(^uint64(0)) + 2)
-	u2 := (float64(seedB) + 1) / (float64(^uint64(0)) + 2)
-	z := math.Sqrt(-2*math.Log(u1)) * math.Cos(2*math.Pi*u2)
-	deviation := z * claudeMockCacheTargetSigma
-	return math.Max(-claudeMockCacheMaxDeviation, math.Min(claudeMockCacheMaxDeviation, deviation))
-}
-
-func claudeMockCacheSeed(accountID, hourBucket, slot int64) uint64 {
-	var data [24]byte
-	binary.LittleEndian.PutUint64(data[0:8], uint64(accountID))
-	binary.LittleEndian.PutUint64(data[8:16], uint64(hourBucket))
-	binary.LittleEndian.PutUint64(data[16:24], uint64(slot))
-	sum := sha256.Sum256(data[:])
-	return binary.LittleEndian.Uint64(sum[:8])
 }
 
 type claudeMockCacheAnalyzer struct {
@@ -457,9 +349,14 @@ func analyzeClaudeMockCachePrefixes(parsed *ParsedRequest, model string, inputTo
 		return nil
 	}
 
-	result := make([]ClaudeMockCachePrefix, 0, len(analyzer.breakpoints))
+	start := 0
+	if len(analyzer.breakpoints) > claudeMockCacheMaxCheckpoints {
+		start = len(analyzer.breakpoints) - claudeMockCacheMaxCheckpoints
+	}
+	selected := analyzer.breakpoints[start:]
+	result := make([]ClaudeMockCachePrefix, 0, len(selected))
 	previousScaled := 0
-	for _, breakpoint := range analyzer.breakpoints {
+	for _, breakpoint := range selected {
 		scaled := int(math.Round(float64(inputTokens) * float64(breakpoint.cumulativeWeight) / float64(analyzer.totalWeight)))
 		if scaled > inputTokens {
 			scaled = inputTokens

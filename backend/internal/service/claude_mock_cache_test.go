@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -11,13 +12,9 @@ func TestClaudeMockCacheMemoryLifecycle(t *testing.T) {
 	simulator := newClaudeMockCacheSimulator(nil)
 	base := time.Date(2026, 8, 16, 12, 0, 0, 0, time.UTC)
 	req := ClaudeMockCacheClassifyRequest{
-		AccountID:      1,
-		HourBucket:     base.Unix() / int64(time.Hour/time.Second),
-		TargetBasisPts: 9100,
-		TotalTokens:    100,
-		PrefixTTL:      5 * time.Minute,
-		StatsTTL:       2 * time.Hour,
-		Prefixes:       []ClaudeMockCachePrefix{{Hash: "prefix", Tokens: 80}},
+		AccountID: 1,
+		PrefixTTL: 5 * time.Minute,
+		Prefixes:  []ClaudeMockCachePrefix{{Hash: "prefix", Tokens: 80}},
 	}
 
 	first := simulator.classifyMemory(req, base)
@@ -41,13 +38,9 @@ func TestClaudeMockCacheExpiredPrefixIsCreation(t *testing.T) {
 	simulator := newClaudeMockCacheSimulator(nil)
 	base := time.Date(2026, 8, 16, 12, 0, 0, 0, time.UTC)
 	req := ClaudeMockCacheClassifyRequest{
-		AccountID:      2,
-		HourBucket:     base.Unix() / int64(time.Hour/time.Second),
-		TargetBasisPts: 9900,
-		TotalTokens:    100,
-		PrefixTTL:      5 * time.Minute,
-		StatsTTL:       2 * time.Hour,
-		Prefixes:       []ClaudeMockCachePrefix{{Hash: "prefix", Tokens: 70}},
+		AccountID: 2,
+		PrefixTTL: 5 * time.Minute,
+		Prefixes:  []ClaudeMockCachePrefix{{Hash: "prefix", Tokens: 70}},
 	}
 
 	simulator.classifyMemory(req, base)
@@ -57,77 +50,62 @@ func TestClaudeMockCacheExpiredPrefixIsCreation(t *testing.T) {
 	}
 }
 
-func TestClaudeMockCacheDoesNotRaiseNaturalRate(t *testing.T) {
+func TestClaudeMockCacheMixedReadAndCreation(t *testing.T) {
 	simulator := newClaudeMockCacheSimulator(nil)
 	base := time.Date(2026, 8, 16, 12, 0, 0, 0, time.UTC)
-	req := ClaudeMockCacheClassifyRequest{
-		AccountID:      3,
-		HourBucket:     base.Unix() / int64(time.Hour/time.Second),
-		TargetBasisPts: 9000,
-		TotalTokens:    100,
-		PrefixTTL:      5 * time.Minute,
-		StatsTTL:       2 * time.Hour,
-		Prefixes:       []ClaudeMockCachePrefix{{Hash: "small-prefix", Tokens: 20}},
+	stable := ClaudeMockCacheClassifyRequest{
+		AccountID: 3,
+		PrefixTTL: 5 * time.Minute,
+		Prefixes: []ClaudeMockCachePrefix{
+			{Hash: "stable", Tokens: 60},
+			{Hash: "tail-v1", Tokens: 40},
+		},
 	}
 
-	first := simulator.classifyMemory(req, base)
-	second := simulator.classifyMemory(req, base.Add(time.Minute))
-	if first.CacheReadTokens != 0 {
-		t.Fatalf("new prefix was forced into a hit: %+v", first)
+	first := simulator.classifyMemory(stable, base)
+	if first.CacheCreationTokens != 100 || first.CacheReadTokens != 0 {
+		t.Fatalf("first request = %+v, want full creation", first)
 	}
-	if second.CacheReadTokens != 20 {
-		t.Fatalf("natural hit below target was suppressed: %+v", second)
+
+	changed := stable
+	changed.Prefixes = []ClaudeMockCachePrefix{
+		{Hash: "stable", Tokens: 60},
+		{Hash: "tail-v2", Tokens: 40},
+	}
+	second := simulator.classifyMemory(changed, base.Add(time.Minute))
+	if second.CacheReadTokens != 60 || second.CacheCreationTokens != 40 {
+		t.Fatalf("changed tail = %+v, want stable read and tail creation", second)
 	}
 }
 
-func TestClaudeMockCacheReducesOnlyNaturallyHighRate(t *testing.T) {
+func TestClaudeMockCacheForcedMissAppliesToWholeRequestAndRefreshesTTL(t *testing.T) {
 	simulator := newClaudeMockCacheSimulator(nil)
 	base := time.Date(2026, 8, 16, 12, 0, 0, 0, time.UTC)
 	req := ClaudeMockCacheClassifyRequest{
-		AccountID:      4,
-		HourBucket:     base.Unix() / int64(time.Hour/time.Second),
-		TargetBasisPts: 5000,
-		TotalTokens:    100,
-		PrefixTTL:      5 * time.Minute,
-		StatsTTL:       2 * time.Hour,
-		Prefixes:       []ClaudeMockCachePrefix{{Hash: "large-prefix", Tokens: 100}},
-	}
-
-	results := make([]ClaudeMockCacheClassifyResult, 0, 4)
-	for i := 0; i < 4; i++ {
-		results = append(results, simulator.classifyMemory(req, base.Add(time.Duration(i)*time.Minute)))
-	}
-
-	reportedRead := 0
-	for _, result := range results {
-		reportedRead += result.CacheReadTokens
-	}
-	if reportedRead != 200 {
-		t.Fatalf("reported reads = %d, want 200 of 400 tokens near the 50%% cap; results=%+v", reportedRead, results)
-	}
-	if results[3].CacheCreationTokens != 100 {
-		t.Fatalf("naturally eligible hit was not reduced after rate exceeded target: %+v", results[3])
-	}
-}
-
-func TestClaudeMockCacheCountsRequestsWithoutBreakpointsInDenominator(t *testing.T) {
-	simulator := newClaudeMockCacheSimulator(nil)
-	base := time.Date(2026, 8, 16, 12, 0, 0, 0, time.UTC)
-	req := ClaudeMockCacheClassifyRequest{
-		AccountID:      5,
-		HourBucket:     base.Unix() / int64(time.Hour/time.Second),
-		TargetBasisPts: 5000,
-		TotalTokens:    100,
-		PrefixTTL:      5 * time.Minute,
-		StatsTTL:       2 * time.Hour,
+		AccountID: 4,
+		PrefixTTL: 5 * time.Minute,
+		Prefixes: []ClaudeMockCachePrefix{
+			{Hash: "first", Tokens: 60},
+			{Hash: "second", Tokens: 40},
+		},
 	}
 
 	simulator.classifyMemory(req, base)
-	req.Prefixes = []ClaudeMockCachePrefix{{Hash: "prefix", Tokens: 100}}
-	simulator.classifyMemory(req, base.Add(time.Minute))
-	result := simulator.classifyMemory(req, base.Add(2*time.Minute))
-	if result.CacheReadTokens != 100 {
-		t.Fatalf("uncached request was omitted from denominator: %+v", result)
+	hit := simulator.classifyMemory(req, base.Add(time.Minute))
+	if hit.CacheReadTokens != 100 || hit.CacheCreationTokens != 0 {
+		t.Fatalf("warm request = %+v, want full read", hit)
+	}
+
+	req.ForceMiss = true
+	miss := simulator.classifyMemory(req, base.Add(4*time.Minute))
+	if miss.CacheReadTokens != 0 || miss.CacheCreationTokens != 100 {
+		t.Fatalf("forced miss = %+v, want full creation", miss)
+	}
+
+	req.ForceMiss = false
+	after := simulator.classifyMemory(req, base.Add(8*time.Minute))
+	if after.CacheReadTokens != 100 || after.CacheCreationTokens != 0 {
+		t.Fatalf("request after forced miss = %+v, want refreshed hit", after)
 	}
 }
 
@@ -135,13 +113,13 @@ func TestClaudeMockCacheApplyConservesTokensAndPreservesRealUsage(t *testing.T) 
 	base := time.Date(2026, 8, 16, 12, 0, 0, 0, time.UTC)
 	simulator := newClaudeMockCacheSimulator(nil)
 	simulator.now = func() time.Time { return base }
+	simulator.miss = func() bool { return false }
 	account := &Account{
 		ID:       6,
 		Platform: PlatformAnthropic,
 		Type:     AccountTypeAPIKey,
 		Extra: map[string]any{
-			"mock_cache_enabled":        true,
-			"mock_cache_target_percent": 91,
+			"mock_cache_enabled": true,
 		},
 	}
 	parsed := &ParsedRequest{
@@ -172,39 +150,92 @@ func TestClaudeMockCacheApplyConservesTokensAndPreservesRealUsage(t *testing.T) 
 	}
 }
 
-func TestClaudeMockCacheTargetIsDeterministicAndBounded(t *testing.T) {
-	now := time.Date(2026, 8, 16, 12, 17, 30, 0, time.UTC)
-	first := claudeMockCacheTargetBasisPoints(7, 91, now)
-	second := claudeMockCacheTargetBasisPoints(7, 91, now)
-	if first != second {
-		t.Fatalf("target is not deterministic: %d != %d", first, second)
+func TestClaudeMockCacheApplySamplesMissOnce(t *testing.T) {
+	base := time.Date(2026, 8, 16, 12, 0, 0, 0, time.UTC)
+	simulator := newClaudeMockCacheSimulator(nil)
+	simulator.now = func() time.Time { return base }
+	calls := 0
+	simulator.miss = func() bool {
+		calls++
+		return true
 	}
-	if first < 8500 || first > 9700 {
-		t.Fatalf("target %d is outside configured +/-1 hour offset and +/-5 gaussian bound", first)
+	account := &Account{
+		ID:       7,
+		Platform: PlatformAnthropic,
+		Type:     AccountTypeAPIKey,
+		Extra:    map[string]any{"mock_cache_enabled": true},
 	}
-	for slot := int64(0); slot < 12; slot++ {
-		deviation := claudeMockCacheGaussian(7, now.Unix()/int64(time.Hour/time.Second), slot)
-		if deviation < -5 || deviation > 5 {
-			t.Fatalf("slot %d deviation %f is outside +/-5", slot, deviation)
+	parsed := &ParsedRequest{
+		Model: "claude-sonnet-4-5",
+		Body: NewRequestBodyRef([]byte(`{
+			"system":[{"type":"text","text":"one","cache_control":{"type":"ephemeral"}}],
+			"messages":[{"role":"user","content":[{"type":"text","text":"two","cache_control":{"type":"ephemeral"}}]}]
+		}`)),
+	}
+	usage := ClaudeUsage{InputTokens: 100}
+	if !simulator.apply(context.Background(), account, parsed, parsed.Model, &usage) {
+		t.Fatal("mock cache usage was not applied")
+	}
+	if calls != 1 {
+		t.Fatalf("miss sampler calls = %d, want exactly one per request", calls)
+	}
+	if usage.CacheReadInputTokens != 0 || usage.CacheCreationInputTokens == 0 {
+		t.Fatalf("forced request miss was not reported as creation: %+v", usage)
+	}
+}
+
+func TestAnalyzeClaudeMockCachePrefixesKeepsLastFourCheckpoints(t *testing.T) {
+	body := []byte(`{
+		"system":[
+			{"type":"text","text":"checkpoint one","cache_control":{"type":"ephemeral"}},
+			{"type":"text","text":"checkpoint two","cache_control":{"type":"ephemeral"}},
+			{"type":"text","text":"checkpoint three","cache_control":{"type":"ephemeral"}},
+			{"type":"text","text":"checkpoint four","cache_control":{"type":"ephemeral"}},
+			{"type":"text","text":"checkpoint five","cache_control":{"type":"ephemeral"}},
+			{"type":"text","text":"checkpoint six","cache_control":{"type":"ephemeral"}}
+		]
+	}`)
+	parsed := &ParsedRequest{Model: "claude-sonnet-4-5", Body: NewRequestBodyRef(body)}
+	prefixes := analyzeClaudeMockCachePrefixes(parsed, parsed.Model, 600)
+	if len(prefixes) != claudeMockCacheMaxCheckpoints {
+		t.Fatalf("prefix count = %d, want %d", len(prefixes), claudeMockCacheMaxCheckpoints)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("decode test request: %v", err)
+	}
+	analyzer := &claudeMockCacheAnalyzer{model: parsed.Model}
+	analyzer.addSystem(decoded["system"])
+	expected := analyzer.breakpoints[len(analyzer.breakpoints)-claudeMockCacheMaxCheckpoints:]
+	total := 0
+	for i, prefix := range prefixes {
+		if prefix.Hash != expected[i].hash {
+			t.Fatalf("prefix %d hash does not match checkpoint %d", i, i+3)
 		}
+		total += prefix.Tokens
+	}
+	if total != 600 {
+		t.Fatalf("classified tokens = %d, want 600 through the final checkpoint", total)
+	}
+	if prefixes[0].Tokens <= prefixes[1].Tokens {
+		t.Fatalf("first retained segment = %d, want it to include earlier discarded checkpoints", prefixes[0].Tokens)
 	}
 }
 
 func TestNormalizeAnthropicMockCacheExtra(t *testing.T) {
 	normalized, err := normalizeAnthropicMockCacheExtra(PlatformAnthropic, AccountTypeAPIKey, map[string]any{
-		"mock_cache_enabled": true,
+		"mock_cache_enabled":        true,
+		"mock_cache_target_percent": "legacy-invalid-value",
 	})
 	if err != nil {
 		t.Fatalf("normalize enabled config: %v", err)
 	}
-	if normalized["mock_cache_target_percent"] != 91 {
-		t.Fatalf("default target = %#v, want 91", normalized["mock_cache_target_percent"])
+	if normalized["mock_cache_enabled"] != true {
+		t.Fatalf("mock cache switch = %#v, want true", normalized["mock_cache_enabled"])
 	}
-
-	if _, err := normalizeAnthropicMockCacheExtra(PlatformAnthropic, AccountTypeAPIKey, map[string]any{
-		"mock_cache_target_percent": 100,
-	}); err == nil {
-		t.Fatal("out-of-range target was accepted")
+	if _, ok := normalized["mock_cache_target_percent"]; ok {
+		t.Fatal("legacy target percentage was retained")
 	}
 
 	ineligible, err := normalizeAnthropicMockCacheExtra(PlatformOpenAI, AccountTypeAPIKey, map[string]any{
@@ -217,6 +248,9 @@ func TestNormalizeAnthropicMockCacheExtra(t *testing.T) {
 	}
 	if _, ok := ineligible["mock_cache_enabled"]; ok {
 		t.Fatal("mock cache switch was retained for an ineligible account")
+	}
+	if _, ok := ineligible["mock_cache_target_percent"]; ok {
+		t.Fatal("legacy target percentage was retained for an ineligible account")
 	}
 	if ineligible["keep"] != true {
 		t.Fatal("unrelated extra field was removed")
@@ -234,6 +268,7 @@ func TestClaudeMockCacheStoreFailureFallsBackToMemory(t *testing.T) {
 	simulator := newClaudeMockCacheSimulator(nil)
 	simulator.store = failingClaudeMockCacheStore{}
 	simulator.now = func() time.Time { return base }
+	simulator.miss = func() bool { return false }
 	account := &Account{
 		ID:       8,
 		Platform: PlatformAnthropic,

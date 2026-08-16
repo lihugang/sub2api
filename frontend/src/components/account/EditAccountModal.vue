@@ -1845,11 +1845,6 @@
             />
           </button>
         </div>
-        <div v-if="mockCacheEnabled" class="mt-3">
-          <label class="input-label text-xs">{{ t('admin.accounts.anthropic.mockCacheTarget') }}</label>
-          <input v-model.number="mockCacheTargetPercent" type="number" min="1" max="99" step="1" class="input mt-1" />
-          <p class="input-hint">{{ t('admin.accounts.anthropic.mockCacheTargetHint') }}</p>
-        </div>
       </div>
 
       <div
@@ -3085,7 +3080,6 @@ const cacheTTLOverrideTarget = ref<string>('5m')
 const customBaseUrlEnabled = ref(false)
 const customBaseUrl = ref('')
 const mockCacheEnabled = ref(false)
-const mockCacheTargetPercent = ref(91)
 
 // OpenAI 自动透传开关（OAuth/API Key）
 const openaiPassthroughEnabled = ref(false)
@@ -3570,7 +3564,6 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   anthropicAPIKeyAuthScheme.value = 'x_api_key'
   webSearchEmulationMode.value = 'default'
   mockCacheEnabled.value = false
-  mockCacheTargetPercent.value = 91
   if (newAccount.platform === 'openai' && (newAccount.type === 'oauth' || newAccount.type === 'setup-token' || newAccount.type === 'apikey')) {
     openaiPassthroughEnabled.value = extra?.openai_passthrough === true || extra?.openai_oauth_passthrough === true
     openaiFlattenNamespacesEnabled.value =
@@ -3633,10 +3626,6 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   if (newAccount.platform === 'anthropic' && newAccount.type === 'apikey') {
     anthropicPassthroughEnabled.value = extra?.anthropic_passthrough === true
     mockCacheEnabled.value = newAccount.mock_cache_enabled === true || extra?.mock_cache_enabled === true
-    const mockTarget = Number(newAccount.mock_cache_target_percent ?? extra?.mock_cache_target_percent ?? 91)
-    mockCacheTargetPercent.value = Number.isFinite(mockTarget)
-      ? Math.min(99, Math.max(1, Math.round(mockTarget)))
-      : 91
     anthropicAPIKeyAuthScheme.value = extra?.anthropic_apikey_auth_scheme === 'authorization_bearer'
       ? 'authorization_bearer'
       : 'x_api_key'
@@ -4882,11 +4871,10 @@ const handleSubmit = async () => {
       }
       if (mockCacheEnabled.value) {
         newExtra.mock_cache_enabled = true
-        newExtra.mock_cache_target_percent = Math.min(99, Math.max(1, Math.round(mockCacheTargetPercent.value || 91)))
       } else {
         delete newExtra.mock_cache_enabled
-        delete newExtra.mock_cache_target_percent
       }
+      delete newExtra.mock_cache_target_percent
       updatePayload.extra = newExtra
     }
 
