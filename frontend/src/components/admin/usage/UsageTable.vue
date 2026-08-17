@@ -193,12 +193,13 @@
             <div class="flex items-center gap-1.5">
               <span class="font-medium text-green-600 dark:text-green-400">${{ row.actual_cost?.toFixed(6) || '0.000000' }}</span>
               <span
-                v-if="row.long_context_billing_applied"
+                v-if="showCostDetails && row.long_context_billing_applied"
                 data-testid="long-context-billing-marker"
                 class="inline-flex items-center rounded px-1 py-px text-[10px] font-semibold leading-tight bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:ring-amber-500/30"
               >x2</span>
               <!-- Cost Detail Tooltip -->
               <div
+                v-if="showCostDetails"
                 class="group relative"
                 @mouseenter="showTooltip($event, row)"
                 @mouseleave="hideTooltip"
@@ -373,35 +374,35 @@
           <!-- Cost Breakdown -->
           <div class="mb-2 border-b border-gray-700 pb-1.5">
             <div class="text-xs font-semibold text-gray-300 mb-1">{{ t('usage.costDetails') }}</div>
-            <div v-if="tooltipData && tooltipData.input_cost > 0" class="flex items-center justify-between gap-4">
+            <div v-if="tooltipData && (tooltipData.input_cost ?? 0) > 0" class="flex items-center justify-between gap-4">
               <span class="text-gray-400">{{ t('admin.usage.inputCost') }}</span>
-              <span class="font-medium text-white">${{ tooltipData.input_cost.toFixed(6) }}</span>
+              <span class="font-medium text-white">${{ (tooltipData.input_cost ?? 0).toFixed(6) }}</span>
             </div>
             <div v-if="tooltipData && hasImageInputCost(tooltipData)" class="flex items-center justify-between gap-4">
               <span class="text-gray-400">{{ t('usage.imageInputCost') }}</span>
-              <span class="font-medium text-fuchsia-300">${{ tooltipData.image_input_cost.toFixed(6) }}</span>
+              <span class="font-medium text-fuchsia-300">${{ (tooltipData.image_input_cost ?? 0).toFixed(6) }}</span>
             </div>
-            <div v-if="tooltipData && tooltipData.output_cost > 0" class="flex items-center justify-between gap-4">
+            <div v-if="tooltipData && (tooltipData.output_cost ?? 0) > 0" class="flex items-center justify-between gap-4">
               <span class="text-gray-400">{{ t('admin.usage.outputCost') }}</span>
-              <span class="font-medium text-white">${{ tooltipData.output_cost.toFixed(6) }}</span>
+              <span class="font-medium text-white">${{ (tooltipData.output_cost ?? 0).toFixed(6) }}</span>
             </div>
             <div v-if="tooltipData && hasImageOutputCost(tooltipData)" class="flex items-center justify-between gap-4">
               <span class="text-gray-400">{{ t('usage.imageOutputCost') }}</span>
-              <span class="font-medium text-pink-300">${{ tooltipData.image_output_cost.toFixed(6) }}</span>
+              <span class="font-medium text-pink-300">${{ (tooltipData.image_output_cost ?? 0).toFixed(6) }}</span>
             </div>
             <!-- Token billing: show unit prices per 1M tokens -->
             <template v-if="tooltipData && !isImageUsage(tooltipData) && (!tooltipData.billing_mode || tooltipData.billing_mode === BILLING_MODE_TOKEN)">
               <div v-if="tooltipData && textInputTokens(tooltipData) > 0" class="flex items-center justify-between gap-4">
                 <span class="text-gray-400">{{ t('usage.inputTokenPrice') }}</span>
-                <span class="font-medium text-sky-300">{{ formatTokenPricePerMillion(tooltipData.input_cost, textInputTokens(tooltipData)) }} {{ t('usage.perMillionTokens') }}</span>
+                <span class="font-medium text-sky-300">{{ formatTokenPricePerMillion(tooltipData.input_cost ?? 0, textInputTokens(tooltipData)) }} {{ t('usage.perMillionTokens') }}</span>
               </div>
               <div v-if="tooltipData && hasImageInputTokens(tooltipData)" class="flex items-center justify-between gap-4">
                 <span class="text-gray-400">{{ t('usage.imageInputTokenPrice') }}</span>
                 <span class="font-medium text-fuchsia-300">{{ formatTokenPricePerMillion(tooltipData.image_input_cost ?? 0, tooltipData.image_input_tokens) }} {{ t('usage.perMillionTokens') }}</span>
               </div>
-              <div v-if="tooltipData && tooltipData.output_cost > 0 && textOutputTokens(tooltipData) > 0" class="flex items-center justify-between gap-4">
+              <div v-if="tooltipData && (tooltipData.output_cost ?? 0) > 0 && textOutputTokens(tooltipData) > 0" class="flex items-center justify-between gap-4">
                 <span class="text-gray-400">{{ t('usage.outputTokenPrice') }}</span>
-                <span class="font-medium text-violet-300">{{ formatTokenPricePerMillion(tooltipData.output_cost, textOutputTokens(tooltipData)) }} {{ t('usage.perMillionTokens') }}</span>
+                <span class="font-medium text-violet-300">{{ formatTokenPricePerMillion(tooltipData.output_cost ?? 0, textOutputTokens(tooltipData)) }} {{ t('usage.perMillionTokens') }}</span>
               </div>
               <div v-if="tooltipData && hasImageOutputTokens(tooltipData)" class="flex items-center justify-between gap-4">
                 <span class="text-gray-400">{{ t('usage.imageOutputTokenPrice') }}</span>
@@ -446,13 +447,13 @@
               <span class="text-gray-400">{{ t('usage.unitPrice') }}</span>
               <span class="font-medium text-sky-300">${{ tooltipData?.total_cost?.toFixed(6) || '0.000000' }}</span>
             </div>
-            <div v-if="tooltipData && tooltipData.cache_creation_cost > 0" class="flex items-center justify-between gap-4">
+            <div v-if="tooltipData && (tooltipData.cache_creation_cost ?? 0) > 0" class="flex items-center justify-between gap-4">
               <span class="text-gray-400">{{ t('admin.usage.cacheCreationCost') }}</span>
-              <span class="font-medium text-white">${{ tooltipData.cache_creation_cost.toFixed(6) }}</span>
+              <span class="font-medium text-white">${{ (tooltipData.cache_creation_cost ?? 0).toFixed(6) }}</span>
             </div>
-            <div v-if="tooltipData && tooltipData.cache_read_cost > 0" class="flex items-center justify-between gap-4">
+            <div v-if="tooltipData && (tooltipData.cache_read_cost ?? 0) > 0" class="flex items-center justify-between gap-4">
               <span class="text-gray-400">{{ t('admin.usage.cacheReadCost') }}</span>
-              <span class="font-medium text-white">${{ tooltipData.cache_read_cost.toFixed(6) }}</span>
+              <span class="font-medium text-white">${{ (tooltipData.cache_read_cost ?? 0).toFixed(6) }}</span>
             </div>
           </div>
           <!-- Rate and Summary -->
@@ -548,17 +549,20 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import IpGeoCell from '@/components/common/IpGeoCell.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { fetchBatch, getEntry } from '@/utils/ipGeoLookup'
-import type { AdminUsageLog } from '@/types'
+import type { AdminUsageLog, UsageLog } from '@/types'
 import type { Column } from '@/components/common/types'
 
+type UsageTableRow = UsageLog & Partial<AdminUsageLog>
+
 interface Props {
-  data: AdminUsageLog[]
+  data: UsageTableRow[]
   loading?: boolean
   columns: Column[]
   serverSideSort?: boolean
   defaultSortKey?: string
   defaultSortOrder?: 'asc' | 'desc'
   showAccountBilling?: boolean
+  showCostDetails?: boolean
   showUpstreamEndpoint?: boolean
   /** 嵌入统一卡片内使用：去掉自身卡片外观 */
   flat?: boolean
@@ -570,6 +574,7 @@ const props = withDefaults(defineProps<Props>(), {
   defaultSortKey: '',
   defaultSortOrder: 'asc',
   showAccountBilling: true,
+  showCostDetails: true,
   showUpstreamEndpoint: true,
   flat: false
 })
@@ -582,12 +587,13 @@ const { t } = useI18n()
 const appStore = useAppStore()
 const copiedRequestId = ref<string | null>(null)
 const showAccountBilling = props.showAccountBilling
+const showCostDetails = props.showCostDetails
 const showUpstreamEndpoint = props.showUpstreamEndpoint
 const ipGeoBatchLoading = ref(false)
 
 const showIpGeoToolbar = computed(() => props.columns.some((col) => col.key === 'ip_address'))
 
-const sentUpstreamModel = (row: AdminUsageLog): string => row.upstream_model?.trim() || row.model?.trim() || ''
+const sentUpstreamModel = (row: UsageTableRow): string => row.upstream_model?.trim() || row.model?.trim() || ''
 
 const normalizeModelVariant = (model: string): string => model
   .trim()
@@ -596,13 +602,13 @@ const normalizeModelVariant = (model: string): string => model
   .replace(/-\d{4}-\d{2}-\d{2}$/, '')
   .replace(/-\d{8}$/, '')
 
-const isLikelyModelVariant = (row: AdminUsageLog): boolean => {
+const isLikelyModelVariant = (row: UsageTableRow): boolean => {
   const sent = sentUpstreamModel(row)
   const response = row.upstream_response_model?.trim() || ''
   return sent !== '' && response !== '' && normalizeModelVariant(sent) === normalizeModelVariant(response)
 }
 
-const modelAuditTitle = (row: AdminUsageLog): string => [
+const modelAuditTitle = (row: UsageTableRow): string => [
   `${t('usage.requestedModel')}: ${row.model || '-'}`,
   `${t('usage.sentUpstreamModel')}: ${sentUpstreamModel(row) || '-'}`,
   `${t('usage.upstreamResponseModel')}: ${row.upstream_response_model || '-'}`,
@@ -646,14 +652,14 @@ const copyRequestId = async (requestId: string) => {
 // Tooltip state - cost
 const tooltipVisible = ref(false)
 const tooltipPosition = ref({ x: 0, y: 0 })
-const tooltipData = ref<AdminUsageLog | null>(null)
+const tooltipData = ref<UsageTableRow | null>(null)
 
 // Tooltip state - token
 const tokenTooltipVisible = ref(false)
 const tokenTooltipPosition = ref({ x: 0, y: 0 })
-const tokenTooltipData = ref<AdminUsageLog | null>(null)
+const tokenTooltipData = ref<UsageTableRow | null>(null)
 
-const getRequestTypeLabel = (row: AdminUsageLog): string => {
+const getRequestTypeLabel = (row: UsageTableRow): string => {
   const requestType = resolveUsageRequestType(row)
   if (requestType === 'cyber') return t('usage.cyber')
   if (requestType === 'live') return t('usage.live')
@@ -663,7 +669,7 @@ const getRequestTypeLabel = (row: AdminUsageLog): string => {
   return t('usage.unknown')
 }
 
-const getRequestTypeBadgeClass = (row: AdminUsageLog): string => {
+const getRequestTypeBadgeClass = (row: UsageTableRow): string => {
   const requestType = resolveUsageRequestType(row)
   if (requestType === 'cyber') return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
   if (requestType === 'live') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
@@ -690,7 +696,7 @@ const formatDuration = (ms: number | null | undefined): string => {
 }
 
 // Cost tooltip functions
-const showTooltip = (event: MouseEvent, row: AdminUsageLog) => {
+const showTooltip = (event: MouseEvent, row: UsageTableRow) => {
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
   tooltipData.value = row
@@ -705,7 +711,7 @@ const hideTooltip = () => {
 }
 
 // Token tooltip functions
-const showTokenTooltip = (event: MouseEvent, row: AdminUsageLog) => {
+const showTokenTooltip = (event: MouseEvent, row: UsageTableRow) => {
   const target = event.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
   tokenTooltipData.value = row

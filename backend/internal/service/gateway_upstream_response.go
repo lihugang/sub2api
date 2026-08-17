@@ -1414,14 +1414,21 @@ func (s *GatewayService) handleNonStreamingResponse(ctx context.Context, resp *h
 	if cc5m.Exists() || cc1h.Exists() {
 		response.Usage.CacheCreation5mTokens = int(cc5m.Int())
 		response.Usage.CacheCreation1hTokens = int(cc1h.Int())
+		if response.Usage.CacheCreationInputTokens == 0 {
+			response.Usage.CacheCreationInputTokens = response.Usage.CacheCreation5mTokens + response.Usage.CacheCreation1hTokens
+		}
 	}
 
-	// 兼容 Kimi cached_tokens → cache_read_input_tokens
+	// 兼容 Kimi/OpenAI 风格的 cached_tokens。该口径下 input_tokens 是总输入，
+	// 必须扣除缓存读取和缓存创建，转换为 Anthropic 的互斥 token 桶。
 	if response.Usage.CacheReadInputTokens == 0 {
 		cachedTokens := gjson.GetBytes(body, "usage.cached_tokens").Int()
 		if cachedTokens > 0 {
-			response.Usage.CacheReadInputTokens = int(cachedTokens)
+			normalizeClaudeInclusiveCacheUsage(&response.Usage, int(cachedTokens))
 			if newBody, err := sjson.SetBytes(body, "usage.cache_read_input_tokens", cachedTokens); err == nil {
+				body = newBody
+			}
+			if newBody, err := sjson.SetBytes(body, "usage.input_tokens", response.Usage.InputTokens); err == nil {
 				body = newBody
 			}
 		}
@@ -1482,8 +1489,8 @@ func (s *GatewayService) replaceModelInResponseBody(body []byte, fromModel, toMo
 	return body
 }
 
-// reconcileCachedTokens 兼容 Kimi 等上游：
-// 将 OpenAI 风格的 cached_tokens 映射到 Claude 标准的 cache_read_input_tokens
+// reconcileCachedTokens 兼容 Kimi 等上游：将 OpenAI 风格的总输入 usage
+// 转换为 Anthropic 的互斥 input/cache_read/cache_creation token 桶。
 func reconcileCachedTokens(usage map[string]any) bool {
 	if usage == nil {
 		return false
@@ -1496,6 +1503,23 @@ func reconcileCachedTokens(usage map[string]any) bool {
 	if cached <= 0 {
 		return false
 	}
+	inputTokens := usageInt(usage["input_tokens"])
+	cacheCreationTokens := usageInt(usage["cache_creation_input_tokens"])
+	if cacheCreation, ok := usage["cache_creation"].(map[string]any); ok && cacheCreationTokens == 0 {
+		cacheCreationTokens = usageInt(cacheCreation["ephemeral_5m_input_tokens"]) +
+			usageInt(cacheCreation["ephemeral_1h_input_tokens"])
+	}
+	usage["input_tokens"] = max(inputTokens-int(cached)-cacheCreationTokens, 0)
 	usage["cache_read_input_tokens"] = cached
 	return true
+}
+
+// normalizeClaudeInclusiveCacheUsage converts an OpenAI-compatible total-input
+// usage shape into Anthropic's mutually exclusive token buckets.
+func normalizeClaudeInclusiveCacheUsage(usage *ClaudeUsage, cacheReadTokens int) {
+	if usage == nil || cacheReadTokens <= 0 || usage.CacheReadInputTokens > 0 {
+		return
+	}
+	usage.CacheReadInputTokens = cacheReadTokens
+	usage.InputTokens = max(usage.InputTokens-cacheReadTokens-usage.CacheCreationInputTokens, 0)
 }

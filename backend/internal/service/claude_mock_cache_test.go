@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -184,6 +185,90 @@ func TestClaudeMockCacheApplySamplesMissOnce(t *testing.T) {
 	}
 }
 
+func TestClaudeMockCacheMissRateRemainsTwoPercent(t *testing.T) {
+	if claudeMockCacheMissRate != 0.02 {
+		t.Fatalf("mock cache miss rate = %v, want 0.02", claudeMockCacheMissRate)
+	}
+}
+
+func TestClaudeMockCacheMetricsClassifyReadNaturalAndForcedCreation(t *testing.T) {
+	base := time.Date(2026, 8, 16, 12, 0, 0, 0, time.UTC)
+	simulator := newClaudeMockCacheSimulator(nil)
+	now := base
+	simulator.now = func() time.Time { return now }
+	forceMiss := false
+	simulator.miss = func() bool { return forceMiss }
+	account := &Account{
+		ID:       9,
+		Platform: PlatformAnthropic,
+		Type:     AccountTypeAPIKey,
+		Extra:    map[string]any{"mock_cache_enabled": true},
+	}
+	parsed := &ParsedRequest{
+		Model: "claude-sonnet-4-5",
+		Body: NewRequestBodyRef([]byte(`{
+			"system":[{"type":"text","text":"stable prefix","cache_control":{"type":"ephemeral"}}],
+			"messages":[{"role":"user","content":"hello"}]
+		}`)),
+	}
+
+	first := ClaudeUsage{InputTokens: 100}
+	if !simulator.apply(context.Background(), account, parsed, parsed.Model, &first) {
+		t.Fatal("natural creation was not applied")
+	}
+	now = base.Add(time.Minute)
+	second := ClaudeUsage{InputTokens: 100}
+	if !simulator.apply(context.Background(), account, parsed, parsed.Model, &second) {
+		t.Fatal("cache read was not applied")
+	}
+	forceMiss = true
+	now = base.Add(2 * time.Minute)
+	third := ClaudeUsage{InputTokens: 100}
+	if !simulator.apply(context.Background(), account, parsed, parsed.Model, &third) {
+		t.Fatal("forced creation was not applied")
+	}
+
+	metrics := simulator.snapshotMetrics()
+	if metrics.EligibleRequests != 3 || metrics.AppliedRequests != 3 {
+		t.Fatalf("request metrics = %+v, want three eligible and applied requests", metrics)
+	}
+	if metrics.ForcedMissRequests != 1 || metrics.ReadRequests != 1 || metrics.CreationRequests != 2 {
+		t.Fatalf("classification metrics = %+v, want one forced miss, one read, two creations", metrics)
+	}
+	if metrics.NaturalCreationRequests != 1 || metrics.PartialCreationRequests != 0 {
+		t.Fatalf("natural creation metrics = %+v", metrics)
+	}
+	if metrics.CacheReadTokens != uint64(second.CacheReadInputTokens) {
+		t.Fatalf("read token metrics = %d, want %d", metrics.CacheReadTokens, second.CacheReadInputTokens)
+	}
+	if metrics.CacheCreationTokens != uint64(first.CacheCreationInputTokens+third.CacheCreationInputTokens) {
+		t.Fatalf("creation token metrics = %d, want %d", metrics.CacheCreationTokens, first.CacheCreationInputTokens+third.CacheCreationInputTokens)
+	}
+	if metrics.ForcedCreationTokens != uint64(third.CacheCreationInputTokens) {
+		t.Fatalf("forced creation token metrics = %d, want %d", metrics.ForcedCreationTokens, third.CacheCreationInputTokens)
+	}
+}
+
+func TestAnalyzeClaudeMockCachePrefixesToolChangeInvalidatesSystemCheckpoint(t *testing.T) {
+	makeRequest := func(toolDescription string) *ParsedRequest {
+		body := []byte(fmt.Sprintf(`{
+			"tools":[{"name":"lookup","description":%q,"input_schema":{"type":"object"}}],
+			"system":[{"type":"text","text":"stable system","cache_control":{"type":"ephemeral"}}],
+			"messages":[{"role":"user","content":"hello"}]
+		}`, toolDescription))
+		return &ParsedRequest{Model: "claude-sonnet-4-5", Body: NewRequestBodyRef(body)}
+	}
+
+	before := analyzeClaudeMockCachePrefixes(makeRequest("version one"), "claude-sonnet-4-5", 100)
+	after := analyzeClaudeMockCachePrefixes(makeRequest("version two"), "claude-sonnet-4-5", 100)
+	if len(before) != 1 || len(after) != 1 {
+		t.Fatalf("prefix counts = %d and %d, want one system checkpoint each", len(before), len(after))
+	}
+	if before[0].Hash == after[0].Hash {
+		t.Fatal("tool change did not invalidate the later system checkpoint")
+	}
+}
+
 func TestAnalyzeClaudeMockCachePrefixesKeepsLastFourCheckpoints(t *testing.T) {
 	body := []byte(`{
 		"system":[
@@ -290,5 +375,8 @@ func TestClaudeMockCacheStoreFailureFallsBackToMemory(t *testing.T) {
 	}
 	if usage.CacheCreationInputTokens == 0 {
 		t.Fatalf("memory fallback did not classify the new prefix: %+v", usage)
+	}
+	if got := simulator.snapshotMetrics().StoreFallbackRequests; got != 1 {
+		t.Fatalf("store fallback requests = %d, want 1", got)
 	}
 }

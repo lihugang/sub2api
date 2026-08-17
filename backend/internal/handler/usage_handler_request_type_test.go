@@ -24,6 +24,7 @@ type userUsageRepoCapture struct {
 	groupFilters usagestats.UsageLogFilters
 	listRows     []service.UsageLog
 	stats        *usagestats.UsageStats
+	trendStats   []usagestats.TrendDataPoint
 	modelStats   []usagestats.ModelStat
 	groupStats   []usagestats.GroupStat
 }
@@ -58,7 +59,7 @@ func (s *userUsageRepoCapture) GetUsageTrendWithFilters(ctx context.Context, sta
 		Stream:      stream,
 		BillingType: billingType,
 	}
-	return []usagestats.TrendDataPoint{}, nil
+	return s.trendStats, nil
 }
 
 func (s *userUsageRepoCapture) GetModelStatsWithFilters(ctx context.Context, startTime, endTime time.Time, userID, apiKeyID, accountID, groupID int64, requestType *int16, stream *bool, billingType *int8) ([]usagestats.ModelStat, error) {
@@ -89,6 +90,7 @@ func newUserUsageRequestTypeTestRouter(repo *userUsageRepoCapture) *gin.Engine {
 	})
 	router.GET("/usage", handler.List)
 	router.GET("/usage/stats", handler.Stats)
+	router.GET("/usage/dashboard/trend", handler.DashboardTrend)
 	router.GET("/usage/dashboard/models", handler.DashboardModels)
 	router.GET("/usage/dashboard/snapshot-v2", handler.DashboardSnapshotV2)
 	return router
@@ -174,7 +176,7 @@ func TestUserUsageListAllowsVideoBillingMode(t *testing.T) {
 	require.Equal(t, "video", repo.listFilters.BillingMode)
 }
 
-func TestUserUsageListKeepsUserBillingIPAndAccountCostFields(t *testing.T) {
+func TestUserUsageListHidesStandardAndAccountCosts(t *testing.T) {
 	ipAddress := "203.0.113.10"
 	upstreamModel := "upstream-private-model"
 	billingTier := "internal-tier"
@@ -212,16 +214,16 @@ func TestUserUsageListKeepsUserBillingIPAndAccountCostFields(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	body := rec.Body.String()
-	require.Contains(t, body, `"input_cost":0.01`)
-	require.Contains(t, body, `"output_cost":0.02`)
-	require.Contains(t, body, `"cache_creation_cost":0.03`)
-	require.Contains(t, body, `"cache_read_cost":0.04`)
-	require.Contains(t, body, `"total_cost":0.1`)
+	require.NotContains(t, body, `"input_cost"`)
+	require.NotContains(t, body, `"output_cost"`)
+	require.NotContains(t, body, `"cache_creation_cost"`)
+	require.NotContains(t, body, `"cache_read_cost"`)
+	require.NotContains(t, body, `"total_cost"`)
 	require.Contains(t, body, `"actual_cost":0.08`)
-	require.Contains(t, body, `"rate_multiplier":0.8`)
+	require.NotContains(t, body, `"rate_multiplier"`)
 	require.Contains(t, body, `"ip_address":"203.0.113.10"`)
-	require.Contains(t, body, `"account_rate_multiplier":1.7`)
-	require.Contains(t, body, `"account_stats_cost":0.12`)
+	require.NotContains(t, body, `"account_rate_multiplier"`)
+	require.NotContains(t, body, `"account_stats_cost"`)
 	require.NotContains(t, body, "upstream_endpoint")
 	require.NotContains(t, body, "upstream_model")
 	require.NotContains(t, body, "upstream_response_model")
@@ -238,6 +240,11 @@ func TestUserUsageStatsUsesScopedFilters(t *testing.T) {
 			TotalCost:        0.10,
 			TotalActualCost:  0.08,
 			TotalAccountCost: &accountCost,
+			Endpoints: []usagestats.EndpointStat{{
+				Endpoint:   "/v1/messages",
+				Cost:       0.09,
+				ActualCost: 0.07,
+			}},
 			UpstreamEndpoints: []usagestats.EndpointStat{{
 				Endpoint: "/v1/responses",
 			}},
@@ -259,14 +266,37 @@ func TestUserUsageStatsUsesScopedFilters(t *testing.T) {
 	require.NotNil(t, repo.statsFilters.RequestType)
 	require.Equal(t, int16(service.RequestTypeSync), *repo.statsFilters.RequestType)
 	require.Equal(t, "token", repo.statsFilters.BillingMode)
-	require.Contains(t, rec.Body.String(), `"total_cost":0.1`)
+	require.NotContains(t, rec.Body.String(), `"total_cost"`)
 	require.Contains(t, rec.Body.String(), `"total_actual_cost":0.08`)
-	require.Contains(t, rec.Body.String(), `"total_account_cost":0.12`)
+	require.Contains(t, rec.Body.String(), `"actual_cost":0.07`)
+	require.NotContains(t, rec.Body.String(), `"total_account_cost"`)
+	require.NotContains(t, rec.Body.String(), `"cost"`)
 	require.NotContains(t, rec.Body.String(), "upstream_endpoints")
 	require.NotContains(t, rec.Body.String(), "endpoint_paths")
 }
 
-func TestUserUsageDashboardModelsIncludesAccountCost(t *testing.T) {
+func TestUserUsageDashboardTrendHidesStandardCost(t *testing.T) {
+	repo := &userUsageRepoCapture{
+		trendStats: []usagestats.TrendDataPoint{{
+			Date:       "2026-03-01",
+			Requests:   2,
+			Cost:       0.10,
+			ActualCost: 0.08,
+		}},
+	}
+	router := newUserUsageRequestTypeTestRouter(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/usage/dashboard/trend?start_date=2026-03-01&end_date=2026-03-02", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	require.Contains(t, body, `"actual_cost":0.08`)
+	require.NotContains(t, body, `"cost"`)
+}
+
+func TestUserUsageDashboardModelsHidesStandardAndAccountCost(t *testing.T) {
 	repo := &userUsageRepoCapture{
 		modelStats: []usagestats.ModelStat{{
 			Model:       "gpt-5",
@@ -285,9 +315,9 @@ func TestUserUsageDashboardModelsIncludesAccountCost(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	body := rec.Body.String()
-	require.Contains(t, body, `"cost":0.1`)
+	require.NotContains(t, body, `"cost"`)
 	require.Contains(t, body, `"actual_cost":0.08`)
-	require.Contains(t, body, `"account_cost":0.07`)
+	require.NotContains(t, body, `"account_cost"`)
 }
 
 func TestUserUsageDashboardModelsRejectsAdminModelSources(t *testing.T) {
@@ -319,8 +349,8 @@ func TestUserUsageSnapshotUsesScopedFilters(t *testing.T) {
 	require.Equal(t, int16(service.RequestTypeStream), *repo.trendFilters.RequestType)
 	require.Equal(t, int64(42), repo.groupFilters.UserID)
 	require.Equal(t, int64(11), repo.groupFilters.GroupID)
-	require.Contains(t, rec.Body.String(), `"account_cost":0.07`)
-	require.Contains(t, rec.Body.String(), `"account_cost":0.06`)
+	require.NotContains(t, rec.Body.String(), `"account_cost"`)
+	require.NotContains(t, rec.Body.String(), `"cost"`)
 }
 
 func TestUserUsageSnapshotRejectsInvalidIncludeFlags(t *testing.T) {

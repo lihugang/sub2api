@@ -186,6 +186,7 @@ func TestGatewayService_AnthropicAPIKeyPassthrough_ForwardStreamPreservesBodyAnd
 
 	require.Contains(t, rec.Body.String(), `"cached_tokens":7`)
 	require.NotContains(t, rec.Body.String(), `"cache_read_input_tokens":7`, "透传输出不应被网关改写")
+	require.Equal(t, 2, result.Usage.InputTokens, "兼容上游的总输入应扣除缓存读取")
 	require.Equal(t, 7, result.Usage.CacheReadInputTokens, "计费 usage 解析应保留 cached_tokens 兼容")
 	require.Empty(t, rec.Header().Get("Set-Cookie"), "响应头应经过安全过滤")
 }
@@ -1157,7 +1158,7 @@ func TestGatewayService_AnthropicAPIKeyPassthrough_ForwardDirect_NonStreamingSuc
 	result, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, newAnthropicAPIKeyAccountForTest(), body, "claude-3-5-sonnet-latest", "claude-3-5-sonnet-latest", false, time.Now())
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	require.Equal(t, 12, result.Usage.InputTokens)
+	require.Equal(t, 3, result.Usage.InputTokens)
 	require.Equal(t, 7, result.Usage.OutputTokens)
 	require.Equal(t, 5, result.Usage.CacheCreationInputTokens)
 	require.Equal(t, 4, result.Usage.CacheReadInputTokens)
@@ -1262,7 +1263,7 @@ func TestGatewayService_ParseSSEUsagePassthrough_MessageStartFallbacks(t *testin
 
 	svc.parseSSEUsagePassthrough(data, usage)
 
-	require.Equal(t, 12, usage.InputTokens)
+	require.Equal(t, 0, usage.InputTokens)
 	require.Equal(t, 9, usage.CacheReadInputTokens, "应兼容 cached_tokens 字段")
 	require.Equal(t, 7, usage.CacheCreationInputTokens, "聚合字段为空时应从 5m/1h 明细回填")
 	require.Equal(t, 3, usage.CacheCreation5mTokens)
@@ -1280,7 +1281,7 @@ func TestGatewayService_ParseSSEUsagePassthrough_MessageDeltaSelectiveOverwrite(
 
 	svc.parseSSEUsagePassthrough(data, usage)
 
-	require.Equal(t, 10, usage.InputTokens, "message_delta 中 0 值不应覆盖已有 input_tokens")
+	require.Equal(t, 0, usage.InputTokens, "兼容总输入应扣除缓存读取和缓存创建")
 	require.Equal(t, 5, usage.OutputTokens)
 	require.Equal(t, 8, usage.CacheCreationInputTokens)
 	require.Equal(t, 11, usage.CacheReadInputTokens, "cache_read_input_tokens 为空时应回退到 cached_tokens")
@@ -1330,7 +1331,7 @@ func TestParseClaudeUsageFromResponseBody(t *testing.T) {
 	t.Run("parse all usage fields and fallback", func(t *testing.T) {
 		body := []byte(`{"usage":{"input_tokens":21,"output_tokens":34,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cached_tokens":13,"cache_creation":{"ephemeral_5m_input_tokens":5,"ephemeral_1h_input_tokens":8}}}`)
 		got := parseClaudeUsageFromResponseBody(body)
-		require.Equal(t, 21, got.InputTokens)
+		require.Equal(t, 0, got.InputTokens)
 		require.Equal(t, 34, got.OutputTokens)
 		require.Equal(t, 13, got.CacheReadInputTokens, "cache_read_input_tokens 为空时应回退 cached_tokens")
 		require.Equal(t, 13, got.CacheCreationInputTokens, "聚合字段为空时应由 5m/1h 回填")

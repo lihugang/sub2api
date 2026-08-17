@@ -10,6 +10,7 @@ import (
 	"math/rand/v2"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
@@ -38,6 +39,36 @@ type ClaudeMockCacheClassifyRequest struct {
 type ClaudeMockCacheClassifyResult struct {
 	CacheReadTokens     int
 	CacheCreationTokens int
+}
+
+// claudeMockCacheMetrics is deliberately process-internal. It is intended for
+// admin/operations diagnostics and must not be added to regular-user usage DTOs.
+type claudeMockCacheMetrics struct {
+	EligibleRequests        atomic.Uint64
+	AppliedRequests         atomic.Uint64
+	ForcedMissRequests      atomic.Uint64
+	ReadRequests            atomic.Uint64
+	CreationRequests        atomic.Uint64
+	PartialCreationRequests atomic.Uint64
+	NaturalCreationRequests atomic.Uint64
+	StoreFallbackRequests   atomic.Uint64
+	CacheReadTokens         atomic.Uint64
+	CacheCreationTokens     atomic.Uint64
+	ForcedCreationTokens    atomic.Uint64
+}
+
+type claudeMockCacheMetricsSnapshot struct {
+	EligibleRequests        uint64
+	AppliedRequests         uint64
+	ForcedMissRequests      uint64
+	ReadRequests            uint64
+	CreationRequests        uint64
+	PartialCreationRequests uint64
+	NaturalCreationRequests uint64
+	StoreFallbackRequests   uint64
+	CacheReadTokens         uint64
+	CacheCreationTokens     uint64
+	ForcedCreationTokens    uint64
 }
 
 // ClaudeMockCacheStore is an optional capability implemented by the concrete
@@ -82,6 +113,7 @@ type claudeMockCacheSimulator struct {
 
 	mu       sync.Mutex
 	prefixes map[string]claudeMockCacheMemoryPrefix
+	metrics  claudeMockCacheMetrics
 }
 
 func newClaudeMockCacheSimulator(cache GatewayCache) *claudeMockCacheSimulator {
@@ -105,9 +137,13 @@ func (s *claudeMockCacheSimulator) apply(ctx context.Context, account *Account, 
 	if len(prefixes) == 0 {
 		return false
 	}
+	s.metrics.EligibleRequests.Add(1)
 
 	now := s.now()
 	forceMiss := s.miss != nil && s.miss()
+	if forceMiss {
+		s.metrics.ForcedMissRequests.Add(1)
+	}
 	req := ClaudeMockCacheClassifyRequest{
 		AccountID: account.ID,
 		ForceMiss: forceMiss,
@@ -117,6 +153,7 @@ func (s *claudeMockCacheSimulator) apply(ctx context.Context, account *Account, 
 
 	result, err := s.classify(ctx, req, now)
 	if err != nil {
+		s.metrics.StoreFallbackRequests.Add(1)
 		logger.LegacyPrintf("service.gateway", "mock_claude_cache store fallback: account=%d error=%v", account.ID, err)
 		result = s.classifyMemory(req, now)
 	}
@@ -124,6 +161,7 @@ func (s *claudeMockCacheSimulator) apply(ctx context.Context, account *Account, 
 	if classified <= 0 || classified >= usage.InputTokens+1 {
 		return false
 	}
+	s.recordClassificationMetrics(result, forceMiss)
 
 	before := usage.InputTokens
 	usage.InputTokens -= classified
@@ -131,12 +169,21 @@ func (s *claudeMockCacheSimulator) apply(ctx context.Context, account *Account, 
 	usage.CacheCreationInputTokens = result.CacheCreationTokens
 	usage.CacheCreation5mTokens = result.CacheCreationTokens
 	usage.CacheCreation1hTokens = 0
+	reason := "cache_read"
+	if forceMiss {
+		reason = "forced_miss"
+	} else if result.CacheReadTokens > 0 && result.CacheCreationTokens > 0 {
+		reason = "partial_natural_creation"
+	} else if result.CacheCreationTokens > 0 {
+		reason = "natural_creation"
+	}
 	logger.LegacyPrintf(
 		"service.gateway",
-		"mock_claude_cache_usage: account=%d model=%s checkpoints=%d force_miss=%t input:%d->%d cache_read=%d cache_creation_5m=%d",
+		"mock_claude_cache_usage: account=%d model=%s checkpoints=%d reason=%s force_miss=%t input:%d->%d cache_read=%d cache_creation_5m=%d",
 		account.ID,
 		model,
 		len(prefixes),
+		reason,
 		forceMiss,
 		before,
 		usage.InputTokens,
@@ -144,6 +191,48 @@ func (s *claudeMockCacheSimulator) apply(ctx context.Context, account *Account, 
 		usage.CacheCreationInputTokens,
 	)
 	return true
+}
+
+func (s *claudeMockCacheSimulator) recordClassificationMetrics(result ClaudeMockCacheClassifyResult, forceMiss bool) {
+	if s == nil {
+		return
+	}
+	s.metrics.AppliedRequests.Add(1)
+	if result.CacheReadTokens > 0 {
+		s.metrics.ReadRequests.Add(1)
+		s.metrics.CacheReadTokens.Add(uint64(result.CacheReadTokens))
+	}
+	if result.CacheCreationTokens > 0 {
+		s.metrics.CreationRequests.Add(1)
+		s.metrics.CacheCreationTokens.Add(uint64(result.CacheCreationTokens))
+		if forceMiss {
+			s.metrics.ForcedCreationTokens.Add(uint64(result.CacheCreationTokens))
+		} else {
+			s.metrics.NaturalCreationRequests.Add(1)
+		}
+	}
+	if result.CacheReadTokens > 0 && result.CacheCreationTokens > 0 {
+		s.metrics.PartialCreationRequests.Add(1)
+	}
+}
+
+func (s *claudeMockCacheSimulator) snapshotMetrics() claudeMockCacheMetricsSnapshot {
+	if s == nil {
+		return claudeMockCacheMetricsSnapshot{}
+	}
+	return claudeMockCacheMetricsSnapshot{
+		EligibleRequests:        s.metrics.EligibleRequests.Load(),
+		AppliedRequests:         s.metrics.AppliedRequests.Load(),
+		ForcedMissRequests:      s.metrics.ForcedMissRequests.Load(),
+		ReadRequests:            s.metrics.ReadRequests.Load(),
+		CreationRequests:        s.metrics.CreationRequests.Load(),
+		PartialCreationRequests: s.metrics.PartialCreationRequests.Load(),
+		NaturalCreationRequests: s.metrics.NaturalCreationRequests.Load(),
+		StoreFallbackRequests:   s.metrics.StoreFallbackRequests.Load(),
+		CacheReadTokens:         s.metrics.CacheReadTokens.Load(),
+		CacheCreationTokens:     s.metrics.CacheCreationTokens.Load(),
+		ForcedCreationTokens:    s.metrics.ForcedCreationTokens.Load(),
+	}
 }
 
 func (s *GatewayService) applyClaudeMockCacheUsage(ctx context.Context, account *Account, model string, usage *ClaudeUsage) bool {
@@ -342,8 +431,11 @@ func analyzeClaudeMockCachePrefixes(parsed *ParsedRequest, model string, inputTo
 		return nil
 	}
 	analyzer := &claudeMockCacheAnalyzer{model: strings.TrimSpace(model)}
-	analyzer.addSystem(body["system"])
+	// Anthropic constructs the cacheable prompt prefix in tools → system →
+	// messages order. The synthetic cache must hash the same logical order;
+	// otherwise a tool change can incorrectly retain a later system checkpoint.
 	analyzer.addTools(body["tools"])
+	analyzer.addSystem(body["system"])
 	analyzer.addMessages(body["messages"])
 	if len(analyzer.breakpoints) == 0 || analyzer.totalWeight <= 0 {
 		return nil

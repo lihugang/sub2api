@@ -36,6 +36,19 @@ func TestReconcileCachedTokens_KimiStyle(t *testing.T) {
 	}
 	assert.True(t, reconcileCachedTokens(usage))
 	assert.Equal(t, float64(23), usage["cache_read_input_tokens"])
+	assert.Equal(t, 0, usage["input_tokens"])
+}
+
+func TestReconcileCachedTokens_SubtractsCacheCreationFromTotalInput(t *testing.T) {
+	usage := map[string]any{
+		"input_tokens":                float64(100),
+		"cache_creation_input_tokens": float64(30),
+		"cache_read_input_tokens":     float64(0),
+		"cached_tokens":               float64(20),
+	}
+	require.True(t, reconcileCachedTokens(usage))
+	require.Equal(t, 50, usage["input_tokens"])
+	require.Equal(t, float64(20), usage["cache_read_input_tokens"])
 }
 
 func TestReconcileCachedTokens_NoCachedTokens(t *testing.T) {
@@ -107,6 +120,7 @@ func TestStreamingReconcile_MessageStart(t *testing.T) {
 	usage, ok := msg["usage"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, float64(23), usage["cache_read_input_tokens"])
+	assert.Equal(t, 0, usage["input_tokens"])
 
 	// 验证重新序列化后 JSON 也包含正确值
 	data, err := json.Marshal(event)
@@ -219,8 +233,11 @@ func TestNonStreamingReconcile_KimiResponse(t *testing.T) {
 	if response.Usage.CacheReadInputTokens == 0 {
 		cachedTokens := gjson.GetBytes(body, "usage.cached_tokens").Int()
 		if cachedTokens > 0 {
-			response.Usage.CacheReadInputTokens = int(cachedTokens)
+			normalizeClaudeInclusiveCacheUsage(&response.Usage, int(cachedTokens))
 			if newBody, err := sjson.SetBytes(body, "usage.cache_read_input_tokens", cachedTokens); err == nil {
+				body = newBody
+			}
+			if newBody, err := sjson.SetBytes(body, "usage.input_tokens", response.Usage.InputTokens); err == nil {
 				body = newBody
 			}
 		}
@@ -228,11 +245,12 @@ func TestNonStreamingReconcile_KimiResponse(t *testing.T) {
 
 	// 验证内部 usage（计费用）
 	assert.Equal(t, 23, response.Usage.CacheReadInputTokens)
-	assert.Equal(t, 23, response.Usage.InputTokens)
+	assert.Equal(t, 0, response.Usage.InputTokens)
 	assert.Equal(t, 7, response.Usage.OutputTokens)
 
 	// 验证返回给客户端的 JSON body
 	assert.Equal(t, int64(23), gjson.GetBytes(body, "usage.cache_read_input_tokens").Int())
+	assert.Equal(t, int64(0), gjson.GetBytes(body, "usage.input_tokens").Int())
 }
 
 func TestNonStreamingReconcile_NativeClaude(t *testing.T) {
@@ -275,7 +293,7 @@ func TestNonStreamingReconcile_NoCachedTokens(t *testing.T) {
 	if response.Usage.CacheReadInputTokens == 0 {
 		cachedTokens := gjson.GetBytes(body, "usage.cached_tokens").Int()
 		if cachedTokens > 0 {
-			response.Usage.CacheReadInputTokens = int(cachedTokens)
+			normalizeClaudeInclusiveCacheUsage(&response.Usage, int(cachedTokens))
 			if newBody, err := sjson.SetBytes(body, "usage.cache_read_input_tokens", cachedTokens); err == nil {
 				body = newBody
 			}

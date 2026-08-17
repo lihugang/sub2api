@@ -31,9 +31,7 @@ type userModelStat struct {
 	CacheCreationTokens int64   `json:"cache_creation_tokens"`
 	CacheReadTokens     int64   `json:"cache_read_tokens"`
 	TotalTokens         int64   `json:"total_tokens"`
-	Cost                float64 `json:"cost"`
 	ActualCost          float64 `json:"actual_cost"`
-	AccountCost         float64 `json:"account_cost"`
 }
 
 type userGroupStat struct {
@@ -41,9 +39,38 @@ type userGroupStat struct {
 	GroupName   string  `json:"group_name"`
 	Requests    int64   `json:"requests"`
 	TotalTokens int64   `json:"total_tokens"`
-	Cost        float64 `json:"cost"`
 	ActualCost  float64 `json:"actual_cost"`
-	AccountCost float64 `json:"account_cost"`
+}
+
+type userEndpointStat struct {
+	Endpoint    string  `json:"endpoint"`
+	Requests    int64   `json:"requests"`
+	TotalTokens int64   `json:"total_tokens"`
+	ActualCost  float64 `json:"actual_cost"`
+}
+
+type userUsageStats struct {
+	TotalRequests            int64              `json:"total_requests"`
+	TotalInputTokens         int64              `json:"total_input_tokens"`
+	TotalOutputTokens        int64              `json:"total_output_tokens"`
+	TotalCacheTokens         int64              `json:"total_cache_tokens"`
+	TotalCacheCreationTokens int64              `json:"total_cache_creation_tokens"`
+	TotalCacheReadTokens     int64              `json:"total_cache_read_tokens"`
+	TotalTokens              int64              `json:"total_tokens"`
+	TotalActualCost          float64            `json:"total_actual_cost"`
+	AverageDurationMs        float64            `json:"average_duration_ms"`
+	Endpoints                []userEndpointStat `json:"endpoints,omitempty"`
+}
+
+type userTrendDataPoint struct {
+	Date                string  `json:"date"`
+	Requests            int64   `json:"requests"`
+	InputTokens         int64   `json:"input_tokens"`
+	OutputTokens        int64   `json:"output_tokens"`
+	CacheCreationTokens int64   `json:"cache_creation_tokens"`
+	CacheReadTokens     int64   `json:"cache_read_tokens"`
+	TotalTokens         int64   `json:"total_tokens"`
+	ActualCost          float64 `json:"actual_cost"`
 }
 
 // UsageHandler handles usage-related requests
@@ -408,10 +435,7 @@ func (h *UsageHandler) Stats(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	stats.UpstreamEndpoints = nil
-	stats.EndpointPaths = nil
-
-	response.Success(c, stats)
+	response.Success(c, userUsageStatsFromUsageStats(stats))
 }
 
 const (
@@ -471,7 +495,7 @@ func (h *UsageHandler) DashboardTrend(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{
-		"trend":       trend,
+		"trend":       userTrendFromUsageStats(trend),
 		"start_date":  parsed.StartTime.Format("2006-01-02"),
 		"end_date":    parsed.EndTime.Add(-24 * time.Hour).Format("2006-01-02"),
 		"granularity": granularity,
@@ -543,7 +567,7 @@ func (h *UsageHandler) DashboardSnapshotV2(c *gin.Context) {
 			response.ErrorFrom(c, err)
 			return
 		}
-		resp["trend"] = trend
+		resp["trend"] = userTrendFromUsageStats(trend)
 	}
 	if includeModels {
 		models, err := h.usageService.GetModelStatsWithFiltersBySource(c.Request.Context(), parsed.StartTime, parsed.EndTime, parsed.Filters, usagestats.ModelSourceRequested)
@@ -576,9 +600,7 @@ func userModelStatsFromUsageStats(stats []usagestats.ModelStat) []userModelStat 
 			CacheCreationTokens: stat.CacheCreationTokens,
 			CacheReadTokens:     stat.CacheReadTokens,
 			TotalTokens:         stat.TotalTokens,
-			Cost:                stat.Cost,
 			ActualCost:          stat.ActualCost,
-			AccountCost:         stat.AccountCost,
 		})
 	}
 	return out
@@ -592,9 +614,51 @@ func userGroupStatsFromUsageStats(stats []usagestats.GroupStat) []userGroupStat 
 			GroupName:   stat.GroupName,
 			Requests:    stat.Requests,
 			TotalTokens: stat.TotalTokens,
-			Cost:        stat.Cost,
 			ActualCost:  stat.ActualCost,
-			AccountCost: stat.AccountCost,
+		})
+	}
+	return out
+}
+
+func userUsageStatsFromUsageStats(stats *usagestats.UsageStats) *userUsageStats {
+	if stats == nil {
+		return nil
+	}
+	endpoints := make([]userEndpointStat, 0, len(stats.Endpoints))
+	for _, endpoint := range stats.Endpoints {
+		endpoints = append(endpoints, userEndpointStat{
+			Endpoint:    endpoint.Endpoint,
+			Requests:    endpoint.Requests,
+			TotalTokens: endpoint.TotalTokens,
+			ActualCost:  endpoint.ActualCost,
+		})
+	}
+	return &userUsageStats{
+		TotalRequests:            stats.TotalRequests,
+		TotalInputTokens:         stats.TotalInputTokens,
+		TotalOutputTokens:        stats.TotalOutputTokens,
+		TotalCacheTokens:         stats.TotalCacheTokens,
+		TotalCacheCreationTokens: stats.TotalCacheCreationTokens,
+		TotalCacheReadTokens:     stats.TotalCacheReadTokens,
+		TotalTokens:              stats.TotalTokens,
+		TotalActualCost:          stats.TotalActualCost,
+		AverageDurationMs:        stats.AverageDurationMs,
+		Endpoints:                endpoints,
+	}
+}
+
+func userTrendFromUsageStats(stats []usagestats.TrendDataPoint) []userTrendDataPoint {
+	out := make([]userTrendDataPoint, 0, len(stats))
+	for _, stat := range stats {
+		out = append(out, userTrendDataPoint{
+			Date:                stat.Date,
+			Requests:            stat.Requests,
+			InputTokens:         stat.InputTokens,
+			OutputTokens:        stat.OutputTokens,
+			CacheCreationTokens: stat.CacheCreationTokens,
+			CacheReadTokens:     stat.CacheReadTokens,
+			TotalTokens:         stat.TotalTokens,
+			ActualCost:          stat.ActualCost,
 		})
 	}
 	return out

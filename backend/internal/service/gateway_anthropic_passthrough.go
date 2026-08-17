@@ -680,14 +680,6 @@ func (s *GatewayService) parseSSEUsagePassthrough(data string, usage *ClaudeUsag
 		}
 	}
 
-	if usage.CacheReadInputTokens == 0 {
-		if cached := parsed.Get("message.usage.cached_tokens").Int(); cached > 0 {
-			usage.CacheReadInputTokens = int(cached)
-		}
-		if cached := parsed.Get("usage.cached_tokens").Int(); usage.CacheReadInputTokens == 0 && cached > 0 {
-			usage.CacheReadInputTokens = int(cached)
-		}
-	}
 	if usage.CacheCreationInputTokens == 0 {
 		cc5m := parsed.Get("message.usage.cache_creation.ephemeral_5m_input_tokens").Int()
 		cc1h := parsed.Get("message.usage.cache_creation.ephemeral_1h_input_tokens").Int()
@@ -698,6 +690,15 @@ func (s *GatewayService) parseSSEUsagePassthrough(data string, usage *ClaudeUsag
 		total := cc5m + cc1h
 		if total > 0 {
 			usage.CacheCreationInputTokens = int(total)
+		}
+	}
+	if usage.CacheReadInputTokens == 0 {
+		cached := parsed.Get("message.usage.cached_tokens").Int()
+		if cached == 0 {
+			cached = parsed.Get("usage.cached_tokens").Int()
+		}
+		if cached > 0 {
+			normalizeClaudeInclusiveCacheUsage(usage, int(cached))
 		}
 	}
 }
@@ -730,7 +731,7 @@ func parseClaudeUsageFromResponseBody(body []byte) *ClaudeUsage {
 	}
 	if usage.CacheReadInputTokens == 0 {
 		if cached := usageNode.Get("cached_tokens").Int(); cached > 0 {
-			usage.CacheReadInputTokens = int(cached)
+			normalizeClaudeInclusiveCacheUsage(usage, int(cached))
 		}
 	}
 	return usage

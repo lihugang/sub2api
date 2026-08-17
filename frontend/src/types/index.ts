@@ -1673,16 +1673,15 @@ export interface UsageLog {
   cache_creation_5m_tokens: number
   cache_creation_1h_tokens: number
 
-  input_cost: number
-  output_cost: number
-  cache_creation_cost: number
-  cache_read_cost: number
-  total_cost: number
+  // Standard-cost fields are returned only by administrator APIs.
+  input_cost?: number
+  output_cost?: number
+  cache_creation_cost?: number
+  cache_read_cost?: number
+  total_cost?: number
   actual_cost: number
-  rate_multiplier: number
-  long_context_billing_applied: boolean
-  account_rate_multiplier?: number | null
-  account_stats_cost?: number | null
+  rate_multiplier?: number
+  long_context_billing_applied?: boolean
   billing_type: number
 
   request_type?: UsageRequestType
@@ -1699,9 +1698,9 @@ export interface UsageLog {
   image_size_source: ImageSizeSource | null
   image_size_breakdown: ImageSizeBreakdown | null
   image_input_tokens: number
-  image_input_cost: number
+  image_input_cost?: number
   image_output_tokens: number
-  image_output_cost: number
+  image_output_cost?: number
 
   // User-Agent
   user_agent: string | null
@@ -1727,6 +1726,16 @@ export interface UsageLogAccountSummary {
 }
 
 export interface AdminUsageLog extends UsageLog {
+  input_cost: number
+  output_cost: number
+  cache_creation_cost: number
+  cache_read_cost: number
+  total_cost: number
+  rate_multiplier: number
+  long_context_billing_applied: boolean
+  image_input_cost: number
+  image_output_cost: number
+
   upstream_model?: string | null
   upstream_response_model?: string | null
   upstream_model_mismatch?: boolean | null
@@ -1879,7 +1888,7 @@ export interface UsageStatsResponse {
   total_cache_read_tokens: number
   total_cache_creation_tokens: number
   total_tokens: number
-  total_cost: number // 标准计费
+  total_cost?: number // 管理员接口的标准计费
   total_actual_cost: number // 实际扣除
   total_account_cost?: number // 账号成本（平台实际成本）
   average_duration_ms: number
@@ -1899,7 +1908,7 @@ export interface TrendDataPoint {
   cache_creation_tokens: number
   cache_read_tokens: number
   total_tokens: number
-  cost: number // 标准计费
+  cost?: number // 管理员接口的标准计费
   actual_cost: number // 实际扣除
 }
 
@@ -1911,7 +1920,7 @@ export interface ModelStat {
   cache_creation_tokens: number
   cache_read_tokens: number
   total_tokens: number
-  cost: number // 标准计费
+  cost?: number // 管理员接口的标准计费
   actual_cost: number // 实际扣除
   account_cost?: number // 账号成本（仅管理员接口返回）
 }
@@ -1920,7 +1929,7 @@ export interface EndpointStat {
   endpoint: string
   requests: number
   total_tokens: number
-  cost: number
+  cost?: number
   actual_cost: number
 }
 
@@ -1929,7 +1938,7 @@ export interface GroupStat {
   group_name: string
   requests: number
   total_tokens: number
-  cost: number // 标准计费
+  cost?: number // 管理员接口的标准计费
   actual_cost: number // 实际扣除
   account_cost?: number // 账号成本（仅管理员接口返回）
 }
