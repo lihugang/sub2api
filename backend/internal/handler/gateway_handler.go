@@ -370,7 +370,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 			}
 			account := selection.Account
 			setOpsSelectedAccount(c, account.ID, account.Platform)
-			service.SetGatewayAccountNotice(c, service.GatewayAccountNoticeAnthropic, noticePreviousAccountID, account, service.ModelRoutingNoticeModeForUser(apiKey.User))
+			service.SetGatewayAccountNotice(c, service.GatewayAccountNoticeAnthropic, noticePreviousAccountID, account, service.ModelRoutingNoticeModeDisabled)
 
 			// 检查请求拦截（预热请求、SUGGESTION MODE等）
 			if account.IsInterceptWarmupEnabled() {
@@ -684,7 +684,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 			}
 			account := selection.Account
 			setOpsSelectedAccount(c, account.ID, account.Platform)
-			service.SetGatewayAccountNotice(c, service.GatewayAccountNoticeAnthropic, noticePreviousAccountID, account, service.ModelRoutingNoticeModeForUser(apiKey.User))
+			service.SetGatewayAccountNotice(c, service.GatewayAccountNoticeAnthropic, noticePreviousAccountID, account, service.ModelRoutingNoticeModeDisabled)
 
 			// [DEBUG-STICKY] 打印账号选择结果
 			reqLog.Info("sticky.account_selected",
