@@ -113,17 +113,17 @@ type Group struct {
 	VideoRateIndependent         bool    `json:"video_rate_independent"`
 	VideoRateMultiplier          float64 `json:"video_rate_multiplier"`
 	// 高峰时段倍率配置
-	PeakRateEnabled    bool     `json:"peak_rate_enabled"`
-	PeakStart          string   `json:"peak_start"`
-	PeakEnd            string   `json:"peak_end"`
-	PeakRateMultiplier float64  `json:"peak_rate_multiplier"`
+	PeakRateEnabled    bool                   `json:"peak_rate_enabled"`
+	PeakStart          string                 `json:"peak_start"`
+	PeakEnd            string                 `json:"peak_end"`
+	PeakRateMultiplier float64                `json:"peak_rate_multiplier"`
 	TimeRateRules      []service.TimeRateRule `json:"time_rate_rules"`
-	ImagePrice1K       *float64 `json:"image_price_1k"`
-	ImagePrice2K       *float64 `json:"image_price_2k"`
-	ImagePrice4K       *float64 `json:"image_price_4k"`
-	VideoPrice480P     *float64 `json:"video_price_480p"`
-	VideoPrice720P     *float64 `json:"video_price_720p"`
-	VideoPrice1080P    *float64 `json:"video_price_1080p"`
+	ImagePrice1K       *float64               `json:"image_price_1k"`
+	ImagePrice2K       *float64               `json:"image_price_2k"`
+	ImagePrice4K       *float64               `json:"image_price_4k"`
+	VideoPrice480P     *float64               `json:"video_price_480p"`
+	VideoPrice720P     *float64               `json:"video_price_720p"`
+	VideoPrice1080P    *float64               `json:"video_price_1080p"`
 	// VideoModelPrices 可选按模型族×分辨率覆盖视频每秒单价 (USD/s)。
 	VideoModelPrices map[string]map[string]float64 `json:"video_model_prices,omitempty"`
 	// Codex alpha/search 网页搜索单次价格（USD/次）；null 表示使用默认价 0.01

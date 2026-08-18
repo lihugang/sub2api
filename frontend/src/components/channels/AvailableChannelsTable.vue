@@ -101,6 +101,7 @@
                     :subscription-type="(g.subscription_type || 'standard') as SubscriptionType"
                     :rate-multiplier="g.rate_multiplier"
                     :user-rate-multiplier="userGroupRates[g.id] ?? null"
+                    :time-rate-rules="g.time_rate_rules"
                     always-show-rate
                   />
                   <span
@@ -135,6 +136,7 @@
                     :subscription-type="(g.subscription_type || 'standard') as SubscriptionType"
                     :rate-multiplier="g.rate_multiplier"
                     :user-rate-multiplier="userGroupRates[g.id] ?? null"
+                    :time-rate-rules="g.time_rate_rules"
                     always-show-rate
                   />
                   <span
@@ -240,6 +242,7 @@
                         :subscription-type="(g.subscription_type || 'standard') as SubscriptionType"
                         :rate-multiplier="g.rate_multiplier"
                         :user-rate-multiplier="userGroupRates[g.id] ?? null"
+                        :time-rate-rules="g.time_rate_rules"
                         always-show-rate
                       />
                       <span
@@ -275,6 +278,7 @@
                         :subscription-type="(g.subscription_type || 'standard') as SubscriptionType"
                         :rate-multiplier="g.rate_multiplier"
                         :user-rate-multiplier="userGroupRates[g.id] ?? null"
+                        :time-rate-rules="g.time_rate_rules"
                         always-show-rate
                       />
                       <span

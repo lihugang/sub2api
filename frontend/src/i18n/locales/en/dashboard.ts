@@ -557,7 +557,7 @@ export default {
     detail: {
       noModels: 'No models configured for this group',
       noPricing: 'Pricing not configured',
-      peakNote: 'Peak hours {window}: billing rate ×{multiplier}'
+      peakNote: 'Token time-based rates: {window}'
     },
     table: {
       model: 'Model',

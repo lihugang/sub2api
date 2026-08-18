@@ -56,6 +56,35 @@ func TestPeakMultiplierAt_NilReceiver(t *testing.T) {
 	}
 }
 
+func TestTimeRateMultiplierAt_DailyRules(t *testing.T) {
+	g := &Group{TimeRateRules: []TimeRateRule{
+		{Start: "09:00", End: "12:00", Multiplier: 1.2},
+		{Start: "18:00", End: "24:00", Multiplier: 1.5},
+	}}
+	if got := g.TimeRateMultiplierAt(time.Date(2026, 6, 29, 1, 0, 0, 0, time.UTC)); got != 1.2 {
+		t.Fatalf("UTC 01:00 is 09:00 UTC+08:00: got %v, want 1.2", got)
+	}
+	if got := g.TimeRateMultiplierAt(time.Date(2026, 6, 29, 10, 0, 0, 0, time.UTC)); got != 1.5 {
+		t.Fatalf("UTC 10:00 is 18:00 UTC+08:00: got %v, want 1.5", got)
+	}
+	if got := g.TimeRateMultiplierAt(time.Date(2026, 6, 29, 12, 0, 0, 0, time.UTC)); got != 1 {
+		t.Fatalf("UTC 12:00 is uncovered: got %v, want 1", got)
+	}
+}
+
+func TestNormalizeTimeRateRules_RejectsOverlapAndAccepts24(t *testing.T) {
+	if _, err := NormalizeTimeRateRules([]TimeRateRule{
+		{Start: "09:00", End: "12:00", Multiplier: 1.2},
+		{Start: "11:00", End: "24:00", Multiplier: 1.5},
+	}); err == nil {
+		t.Fatal("expected overlapping time-rate rules to be rejected")
+	}
+	rules, err := NormalizeTimeRateRules([]TimeRateRule{{Start: "18:00", End: "24:00", Multiplier: 1.5}})
+	if err != nil || len(rules) != 1 || rules[0].End != "24:00" {
+		t.Fatalf("expected 24:00 rule to normalize, rules=%+v err=%v", rules, err)
+	}
+}
+
 func TestPeakMultiplierAt_Boundaries(t *testing.T) {
 	g := newPeakGroup(true, "14:00", "18:00", 3.0)
 	cases := []struct {

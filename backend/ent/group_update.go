@@ -181,6 +181,24 @@ func (_u *GroupUpdate) AddPeakRateMultiplier(v float64) *GroupUpdate {
 	return _u
 }
 
+// SetTimeRateRules sets the "time_rate_rules" field.
+func (_u *GroupUpdate) SetTimeRateRules(v json.RawMessage) *GroupUpdate {
+	_u.mutation.SetTimeRateRules(v)
+	return _u
+}
+
+// AppendTimeRateRules appends value to the "time_rate_rules" field.
+func (_u *GroupUpdate) AppendTimeRateRules(v json.RawMessage) *GroupUpdate {
+	_u.mutation.AppendTimeRateRules(v)
+	return _u
+}
+
+// ClearTimeRateRules clears the value of the "time_rate_rules" field.
+func (_u *GroupUpdate) ClearTimeRateRules() *GroupUpdate {
+	_u.mutation.ClearTimeRateRules()
+	return _u
+}
+
 // SetIsExclusive sets the "is_exclusive" field.
 func (_u *GroupUpdate) SetIsExclusive(v bool) *GroupUpdate {
 	_u.mutation.SetIsExclusive(v)
@@ -1541,6 +1559,17 @@ func (_u *GroupUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.AddedPeakRateMultiplier(); ok {
 		_spec.AddField(group.FieldPeakRateMultiplier, field.TypeFloat64, value)
 	}
+	if value, ok := _u.mutation.TimeRateRules(); ok {
+		_spec.SetField(group.FieldTimeRateRules, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedTimeRateRules(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, group.FieldTimeRateRules, value)
+		})
+	}
+	if _u.mutation.TimeRateRulesCleared() {
+		_spec.ClearField(group.FieldTimeRateRules, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.IsExclusive(); ok {
 		_spec.SetField(group.FieldIsExclusive, field.TypeBool, value)
 	}
@@ -2299,6 +2328,24 @@ func (_u *GroupUpdateOne) SetNillablePeakRateMultiplier(v *float64) *GroupUpdate
 // AddPeakRateMultiplier adds value to the "peak_rate_multiplier" field.
 func (_u *GroupUpdateOne) AddPeakRateMultiplier(v float64) *GroupUpdateOne {
 	_u.mutation.AddPeakRateMultiplier(v)
+	return _u
+}
+
+// SetTimeRateRules sets the "time_rate_rules" field.
+func (_u *GroupUpdateOne) SetTimeRateRules(v json.RawMessage) *GroupUpdateOne {
+	_u.mutation.SetTimeRateRules(v)
+	return _u
+}
+
+// AppendTimeRateRules appends value to the "time_rate_rules" field.
+func (_u *GroupUpdateOne) AppendTimeRateRules(v json.RawMessage) *GroupUpdateOne {
+	_u.mutation.AppendTimeRateRules(v)
+	return _u
+}
+
+// ClearTimeRateRules clears the value of the "time_rate_rules" field.
+func (_u *GroupUpdateOne) ClearTimeRateRules() *GroupUpdateOne {
+	_u.mutation.ClearTimeRateRules()
 	return _u
 }
 
@@ -3691,6 +3738,17 @@ func (_u *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error)
 	}
 	if value, ok := _u.mutation.AddedPeakRateMultiplier(); ok {
 		_spec.AddField(group.FieldPeakRateMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.TimeRateRules(); ok {
+		_spec.SetField(group.FieldTimeRateRules, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedTimeRateRules(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, group.FieldTimeRateRules, value)
+		})
+	}
+	if _u.mutation.TimeRateRulesCleared() {
+		_spec.ClearField(group.FieldTimeRateRules, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.IsExclusive(); ok {
 		_spec.SetField(group.FieldIsExclusive, field.TypeBool, value)

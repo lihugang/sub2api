@@ -589,7 +589,7 @@ export interface Group {
   peak_start: string
   peak_end: string
   peak_rate_multiplier: number
-  time_rate_rules: TimeRateRule[]
+  time_rate_rules?: TimeRateRule[]
   // Claude Code 客户端限制
   claude_code_only: boolean
   fallback_group_id: number | null

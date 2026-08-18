@@ -162,6 +162,12 @@ func (_c *GroupCreate) SetNillablePeakRateMultiplier(v *float64) *GroupCreate {
 	return _c
 }
 
+// SetTimeRateRules sets the "time_rate_rules" field.
+func (_c *GroupCreate) SetTimeRateRules(v json.RawMessage) *GroupCreate {
+	_c.mutation.SetTimeRateRules(v)
+	return _c
+}
+
 // SetIsExclusive sets the "is_exclusive" field.
 func (_c *GroupCreate) SetIsExclusive(v bool) *GroupCreate {
 	_c.mutation.SetIsExclusive(v)
@@ -1396,6 +1402,10 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 		_spec.SetField(group.FieldPeakRateMultiplier, field.TypeFloat64, value)
 		_node.PeakRateMultiplier = value
 	}
+	if value, ok := _c.mutation.TimeRateRules(); ok {
+		_spec.SetField(group.FieldTimeRateRules, field.TypeJSON, value)
+		_node.TimeRateRules = value
+	}
 	if value, ok := _c.mutation.IsExclusive(); ok {
 		_spec.SetField(group.FieldIsExclusive, field.TypeBool, value)
 		_node.IsExclusive = value
@@ -1889,6 +1899,24 @@ func (u *GroupUpsert) UpdatePeakRateMultiplier() *GroupUpsert {
 // AddPeakRateMultiplier adds v to the "peak_rate_multiplier" field.
 func (u *GroupUpsert) AddPeakRateMultiplier(v float64) *GroupUpsert {
 	u.Add(group.FieldPeakRateMultiplier, v)
+	return u
+}
+
+// SetTimeRateRules sets the "time_rate_rules" field.
+func (u *GroupUpsert) SetTimeRateRules(v json.RawMessage) *GroupUpsert {
+	u.Set(group.FieldTimeRateRules, v)
+	return u
+}
+
+// UpdateTimeRateRules sets the "time_rate_rules" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateTimeRateRules() *GroupUpsert {
+	u.SetExcluded(group.FieldTimeRateRules)
+	return u
+}
+
+// ClearTimeRateRules clears the value of the "time_rate_rules" field.
+func (u *GroupUpsert) ClearTimeRateRules() *GroupUpsert {
+	u.SetNull(group.FieldTimeRateRules)
 	return u
 }
 
@@ -2967,6 +2995,27 @@ func (u *GroupUpsertOne) AddPeakRateMultiplier(v float64) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdatePeakRateMultiplier() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdatePeakRateMultiplier()
+	})
+}
+
+// SetTimeRateRules sets the "time_rate_rules" field.
+func (u *GroupUpsertOne) SetTimeRateRules(v json.RawMessage) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetTimeRateRules(v)
+	})
+}
+
+// UpdateTimeRateRules sets the "time_rate_rules" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateTimeRateRules() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateTimeRateRules()
+	})
+}
+
+// ClearTimeRateRules clears the value of the "time_rate_rules" field.
+func (u *GroupUpsertOne) ClearTimeRateRules() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearTimeRateRules()
 	})
 }
 
@@ -4357,6 +4406,27 @@ func (u *GroupUpsertBulk) AddPeakRateMultiplier(v float64) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdatePeakRateMultiplier() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdatePeakRateMultiplier()
+	})
+}
+
+// SetTimeRateRules sets the "time_rate_rules" field.
+func (u *GroupUpsertBulk) SetTimeRateRules(v json.RawMessage) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetTimeRateRules(v)
+	})
+}
+
+// UpdateTimeRateRules sets the "time_rate_rules" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateTimeRateRules() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateTimeRateRules()
+	})
+}
+
+// ClearTimeRateRules clears the value of the "time_rate_rules" field.
+func (u *GroupUpsertBulk) ClearTimeRateRules() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearTimeRateRules()
 	})
 }
 

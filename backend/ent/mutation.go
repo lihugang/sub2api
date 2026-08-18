@@ -22020,6 +22020,8 @@ type GroupMutation struct {
 	peak_end                                *string
 	peak_rate_multiplier                    *float64
 	addpeak_rate_multiplier                 *float64
+	time_rate_rules                         *json.RawMessage
+	appendtime_rate_rules                   json.RawMessage
 	is_exclusive                            *bool
 	status                                  *string
 	duplicate_operation_id                  *string
@@ -22646,6 +22648,71 @@ func (m *GroupMutation) AddedPeakRateMultiplier() (r float64, exists bool) {
 func (m *GroupMutation) ResetPeakRateMultiplier() {
 	m.peak_rate_multiplier = nil
 	m.addpeak_rate_multiplier = nil
+}
+
+// SetTimeRateRules sets the "time_rate_rules" field.
+func (m *GroupMutation) SetTimeRateRules(jm json.RawMessage) {
+	m.time_rate_rules = &jm
+	m.appendtime_rate_rules = nil
+}
+
+// TimeRateRules returns the value of the "time_rate_rules" field in the mutation.
+func (m *GroupMutation) TimeRateRules() (r json.RawMessage, exists bool) {
+	v := m.time_rate_rules
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTimeRateRules returns the old "time_rate_rules" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldTimeRateRules(ctx context.Context) (v json.RawMessage, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTimeRateRules is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTimeRateRules requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTimeRateRules: %w", err)
+	}
+	return oldValue.TimeRateRules, nil
+}
+
+// AppendTimeRateRules adds jm to the "time_rate_rules" field.
+func (m *GroupMutation) AppendTimeRateRules(jm json.RawMessage) {
+	m.appendtime_rate_rules = append(m.appendtime_rate_rules, jm...)
+}
+
+// AppendedTimeRateRules returns the list of values that were appended to the "time_rate_rules" field in this mutation.
+func (m *GroupMutation) AppendedTimeRateRules() (json.RawMessage, bool) {
+	if len(m.appendtime_rate_rules) == 0 {
+		return nil, false
+	}
+	return m.appendtime_rate_rules, true
+}
+
+// ClearTimeRateRules clears the value of the "time_rate_rules" field.
+func (m *GroupMutation) ClearTimeRateRules() {
+	m.time_rate_rules = nil
+	m.appendtime_rate_rules = nil
+	m.clearedFields[group.FieldTimeRateRules] = struct{}{}
+}
+
+// TimeRateRulesCleared returns if the "time_rate_rules" field was cleared in this mutation.
+func (m *GroupMutation) TimeRateRulesCleared() bool {
+	_, ok := m.clearedFields[group.FieldTimeRateRules]
+	return ok
+}
+
+// ResetTimeRateRules resets all changes to the "time_rate_rules" field.
+func (m *GroupMutation) ResetTimeRateRules() {
+	m.time_rate_rules = nil
+	m.appendtime_rate_rules = nil
+	delete(m.clearedFields, group.FieldTimeRateRules)
 }
 
 // SetIsExclusive sets the "is_exclusive" field.
@@ -25700,7 +25767,7 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 62)
+	fields := make([]string, 0, 63)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -25730,6 +25797,9 @@ func (m *GroupMutation) Fields() []string {
 	}
 	if m.peak_rate_multiplier != nil {
 		fields = append(fields, group.FieldPeakRateMultiplier)
+	}
+	if m.time_rate_rules != nil {
+		fields = append(fields, group.FieldTimeRateRules)
 	}
 	if m.is_exclusive != nil {
 		fields = append(fields, group.FieldIsExclusive)
@@ -25915,6 +25985,8 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.PeakEnd()
 	case group.FieldPeakRateMultiplier:
 		return m.PeakRateMultiplier()
+	case group.FieldTimeRateRules:
+		return m.TimeRateRules()
 	case group.FieldIsExclusive:
 		return m.IsExclusive()
 	case group.FieldStatus:
@@ -26048,6 +26120,8 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldPeakEnd(ctx)
 	case group.FieldPeakRateMultiplier:
 		return m.OldPeakRateMultiplier(ctx)
+	case group.FieldTimeRateRules:
+		return m.OldTimeRateRules(ctx)
 	case group.FieldIsExclusive:
 		return m.OldIsExclusive(ctx)
 	case group.FieldStatus:
@@ -26230,6 +26304,13 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPeakRateMultiplier(v)
+		return nil
+	case group.FieldTimeRateRules:
+		v, ok := value.(json.RawMessage)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTimeRateRules(v)
 		return nil
 	case group.FieldIsExclusive:
 		v, ok := value.(bool)
@@ -26958,6 +27039,9 @@ func (m *GroupMutation) ClearedFields() []string {
 	if m.FieldCleared(group.FieldDescription) {
 		fields = append(fields, group.FieldDescription)
 	}
+	if m.FieldCleared(group.FieldTimeRateRules) {
+		fields = append(fields, group.FieldTimeRateRules)
+	}
 	if m.FieldCleared(group.FieldDuplicateOperationID) {
 		fields = append(fields, group.FieldDuplicateOperationID)
 	}
@@ -27037,6 +27121,9 @@ func (m *GroupMutation) ClearField(name string) error {
 		return nil
 	case group.FieldDescription:
 		m.ClearDescription()
+		return nil
+	case group.FieldTimeRateRules:
+		m.ClearTimeRateRules()
 		return nil
 	case group.FieldDuplicateOperationID:
 		m.ClearDuplicateOperationID()
@@ -27135,6 +27222,9 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldPeakRateMultiplier:
 		m.ResetPeakRateMultiplier()
+		return nil
+	case group.FieldTimeRateRules:
+		m.ResetTimeRateRules()
 		return nil
 	case group.FieldIsExclusive:
 		m.ResetIsExclusive()

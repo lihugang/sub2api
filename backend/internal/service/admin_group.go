@@ -519,6 +519,7 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		MaxReasoningEffort:              maxReasoningEffort,
 		ReasoningEffortMappings:         reasoningEffortMappings,
 	}
+	group.SyncLegacyPeakRateFields()
 	sanitizeGroupMessagesDispatchFields(group)
 	if group.Platform != PlatformOpenAI {
 		group.AllowLive = false
@@ -759,6 +760,7 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 			return nil, err
 		}
 		group.TimeRateRules = rules
+		group.SyncLegacyPeakRateFields()
 	}
 	// 先归一化（非订阅分组——含本次更新转为非订阅——静默清空高峰配置，清洗停用状态下的脏字段），
 	// 再收敛校验：Update 可能只传部分 peak 字段，需对合并后的最终配置统一校验，

@@ -4309,6 +4309,7 @@ import type {
   CompositeRouteMatchType,
   GroupPlatform,
   SubscriptionType,
+  TimeRateRule,
 } from "@/types";
 import type { Column } from "@/components/common/types";
 import AppLayout from "@/components/layout/AppLayout.vue";
@@ -5839,6 +5840,32 @@ const validateProfitControlForm = (form: ProfitControlFormState): boolean => {
   return true;
 };
 
+const validateTimeRateRulesForm = (rules: TimeRateRule[]): boolean => {
+  const parse = (value: string, allow24 = false) => {
+    if (allow24 && value === "24:00") return 1440;
+    const match = /^(\d{2}):(\d{2})$/.exec(value);
+    if (!match) return null;
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    return hour <= 23 && minute <= 59 ? hour * 60 + minute : null;
+  };
+  const ranges = rules.map((rule) => ({
+    start: parse(rule.start),
+    end: parse(rule.end, true),
+    multiplier: Number(rule.multiplier),
+  }));
+  if (ranges.some((rule) => rule.start === null || rule.end === null || rule.start >= rule.end || !Number.isFinite(rule.multiplier) || rule.multiplier < 0)) {
+    appStore.showError(t("admin.groups.timeRate.invalid"));
+    return false;
+  }
+  ranges.sort((left, right) => left.start! - right.start!);
+  if (ranges.some((rule, index) => index > 0 && rule.start! < ranges[index - 1].end!)) {
+    appStore.showError(t("admin.groups.timeRate.overlap"));
+    return false;
+  }
+  return true;
+};
+
 const handleCreateGroup = async () => {
   if (!createForm.name.trim()) {
     appStore.showError(t("admin.groups.nameRequired"));
@@ -5854,6 +5881,7 @@ const handleCreateGroup = async () => {
   if (!validateProfitControlForm(createForm)) {
     return;
   }
+  if (!validateTimeRateRulesForm(createForm.time_rate_rules)) return;
   submitting.value = true;
   try {
     const {
@@ -6130,6 +6158,7 @@ const handleUpdateGroup = async () => {
   if (!validateProfitControlForm(editForm)) {
     return;
   }
+  if (!validateTimeRateRulesForm(editForm.time_rate_rules)) return;
 
   submitting.value = true;
   try {

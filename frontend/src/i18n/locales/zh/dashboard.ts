@@ -562,7 +562,7 @@ export default {
     detail: {
       noModels: '该分组暂未配置模型',
       noPricing: '未配置定价',
-      peakNote: '高峰时段 {window} 计费倍率 ×{multiplier}'
+      peakNote: 'Token 时段倍率：{window}'
     },
     table: {
       model: '模型',

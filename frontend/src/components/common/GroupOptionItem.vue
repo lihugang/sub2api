@@ -62,7 +62,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import GroupBadge from './GroupBadge.vue'
-import type { SubscriptionType, GroupPlatform } from '@/types'
+import type { SubscriptionType, GroupPlatform, TimeRateRule } from '@/types'
 import { useAppStore } from '@/stores/app'
 import { formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
 
@@ -78,6 +78,7 @@ interface Props {
   peakStart?: string
   peakEnd?: string
   peakRateMultiplier?: number
+  timeRateRules?: TimeRateRule[]
   description?: string | null
   selected?: boolean
   showCheckmark?: boolean
@@ -104,7 +105,7 @@ const hasCustomRate = computed(() => {
 const appStore = useAppStore()
 
 const hasPeakRate = computed(() => {
-  return Boolean(props.peakRateEnabled && props.peakStart && props.peakEnd)
+  return Boolean(props.timeRateRules?.length || (props.peakRateEnabled && props.peakStart && props.peakEnd))
 })
 
 const peakRateText = computed(() => {
@@ -113,7 +114,8 @@ const peakRateText = computed(() => {
       peak_rate_enabled: props.peakRateEnabled,
       peak_start: props.peakStart,
       peak_end: props.peakEnd,
-      peak_rate_multiplier: props.peakRateMultiplier
+      peak_rate_multiplier: props.peakRateMultiplier,
+      time_rate_rules: props.timeRateRules
     },
     serverTimezoneLabel(appStore.cachedPublicSettings?.server_utc_offset)
   )

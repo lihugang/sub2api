@@ -31,9 +31,9 @@ type Group struct {
 	// TimeRateRules is the canonical daily token-rate schedule. Times are
 	// HH:MM in UTC+08:00; an empty list disables scheduled pricing.
 	TimeRateRules []TimeRateRule
-	IsExclusive        bool
-	Status             string
-	Hydrated           bool // indicates the group was loaded from a trusted repository source
+	IsExclusive   bool
+	Status        string
+	Hydrated      bool // indicates the group was loaded from a trusted repository source
 	// DuplicateOperationID is internal persistence metadata used only to recover
 	// an already committed one-click copy. It must never be mapped to API DTOs.
 	DuplicateOperationID string
@@ -195,6 +195,25 @@ func formatTimeRateMinute(minutes int) string {
 // NormalizeTimeRateRules validates and canonicalizes a schedule for storage.
 func NormalizeTimeRateRules(rules []TimeRateRule) ([]TimeRateRule, error) {
 	return normalizeTimeRateRules(rules)
+}
+
+// SyncLegacyPeakRateFields keeps the former single-window API projection
+// truthful without making it authoritative for billing.
+func (g *Group) SyncLegacyPeakRateFields() {
+	if g == nil || len(g.TimeRateRules) != 1 {
+		if g != nil {
+			g.PeakRateEnabled = false
+			g.PeakStart = ""
+			g.PeakEnd = ""
+			g.PeakRateMultiplier = 1
+		}
+		return
+	}
+	rule := g.TimeRateRules[0]
+	g.PeakRateEnabled = true
+	g.PeakStart = rule.Start
+	g.PeakEnd = rule.End
+	g.PeakRateMultiplier = rule.Multiplier
 }
 
 // TimeRateMultiplierAt returns the scheduled multiplier at a UTC+08:00 instant.

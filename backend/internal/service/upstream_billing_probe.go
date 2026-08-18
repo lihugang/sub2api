@@ -132,20 +132,22 @@ type UpstreamBillingProbeResult struct {
 }
 
 type upstreamBillingProbeResponse struct {
-	Object                  string   `json:"object"`
-	SchemaVersion           int      `json:"schema_version"`
-	BillingScope            string   `json:"billing_scope"`
-	GroupRateMultiplier     *float64 `json:"group_rate_multiplier"`
-	UserRateMultiplier      *float64 `json:"user_rate_multiplier"`
-	ResolvedRateMultiplier  *float64 `json:"resolved_rate_multiplier"`
-	PeakRateEnabled         *bool    `json:"peak_rate_enabled"`
-	PeakStart               *string  `json:"peak_start"`
-	PeakEnd                 *string  `json:"peak_end"`
-	PeakRateMultiplier      *float64 `json:"peak_rate_multiplier"`
-	AppliedPeakMultiplier   *float64 `json:"applied_peak_multiplier"`
-	EffectiveRateMultiplier *float64 `json:"effective_rate_multiplier"`
-	Timezone                *string  `json:"timezone"`
-	ObservedAt              string   `json:"observed_at"`
+	Object                  string         `json:"object"`
+	SchemaVersion           int            `json:"schema_version"`
+	BillingScope            string         `json:"billing_scope"`
+	GroupRateMultiplier     *float64       `json:"group_rate_multiplier"`
+	UserRateMultiplier      *float64       `json:"user_rate_multiplier"`
+	ResolvedRateMultiplier  *float64       `json:"resolved_rate_multiplier"`
+	PeakRateEnabled         *bool          `json:"peak_rate_enabled"`
+	PeakStart               *string        `json:"peak_start"`
+	PeakEnd                 *string        `json:"peak_end"`
+	PeakRateMultiplier      *float64       `json:"peak_rate_multiplier"`
+	AppliedPeakMultiplier   *float64       `json:"applied_peak_multiplier"`
+	TimeRateRules           []TimeRateRule `json:"time_rate_rules"`
+	TimeRateTimezone        string         `json:"time_rate_timezone"`
+	EffectiveRateMultiplier *float64       `json:"effective_rate_multiplier"`
+	Timezone                *string        `json:"timezone"`
+	ObservedAt              string         `json:"observed_at"`
 }
 
 // GetUpstreamBillingProbeSettings returns defaults when the setting is absent.
@@ -827,6 +829,14 @@ func parseUpstreamBillingProbeResponse(body []byte) (map[string]any, error) {
 		"effective_rate_multiplier": *response.EffectiveRateMultiplier,
 		"observed_at":               observedAt.UTC().Format(time.RFC3339Nano),
 	}
+	if len(response.TimeRateRules) > 0 {
+		rules, normalizeErr := NormalizeTimeRateRules(response.TimeRateRules)
+		if normalizeErr != nil {
+			return nil, fmt.Errorf("invalid time rate rules: %w", normalizeErr)
+		}
+		data["time_rate_rules"] = rules
+		data["time_rate_timezone"] = response.TimeRateTimezone
+	}
 	if response.UserRateMultiplier != nil {
 		data["user_rate_multiplier"] = *response.UserRateMultiplier
 	}
@@ -913,6 +923,21 @@ func upstreamBillingProbeSyncRate(data map[string]any) (float64, bool) {
 }
 
 func upstreamBillingPeakMultiplierAt(data map[string]any, now time.Time) (float64, bool) {
+	if rawRules, exists := data["time_rate_rules"]; exists {
+		encoded, err := json.Marshal(rawRules)
+		if err != nil {
+			return 0, false
+		}
+		var rules []TimeRateRule
+		if err := json.Unmarshal(encoded, &rules); err != nil {
+			return 0, false
+		}
+		rules, err = NormalizeTimeRateRules(rules)
+		if err != nil {
+			return 0, false
+		}
+		return (&Group{TimeRateRules: rules}).TimeRateMultiplierAt(now), true
+	}
 	peakEnabled, ok := data["peak_rate_enabled"].(bool)
 	if !ok {
 		return 0, false

@@ -15,22 +15,20 @@
     </div>
 
     <div v-if="model.length" class="space-y-2">
-      <div v-for="(rule, index) in model" :key="index" class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_32px] items-end gap-2 border border-gray-200 bg-gray-50 p-2 dark:border-dark-600 dark:bg-dark-800">
+      <div v-for="(rule, index) in model" :key="index" class="grid grid-cols-1 items-end gap-2 border border-gray-200 bg-gray-50 p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_32px] dark:border-dark-600 dark:bg-dark-800">
         <label class="block">
           <span class="input-label">{{ t('admin.groups.timeRate.start') }}</span>
           <input v-model="rule.start" type="time" class="input" />
         </label>
         <label class="block">
           <span class="input-label">{{ t('admin.groups.timeRate.end') }}</span>
-          <select v-model="rule.end" class="input">
-            <option v-for="time in endTimes" :key="time" :value="time">{{ time }}</option>
-          </select>
+          <input v-model="rule.end" type="text" inputmode="numeric" class="input" placeholder="18:00 / 24:00" />
         </label>
         <label class="block">
           <span class="input-label">{{ t('admin.groups.timeRate.multiplier') }}</span>
           <input v-model.number="rule.multiplier" type="number" min="0" step="0.001" class="input" />
         </label>
-        <button type="button" class="btn btn-secondary !h-9 !w-8 !px-0" :title="t('admin.groups.timeRate.remove')" @click="remove(index)">
+        <button type="button" class="btn btn-secondary !h-9 !w-8 justify-self-end !px-0" :title="t('admin.groups.timeRate.remove')" @click="remove(index)">
           <Icon name="trash" size="sm" />
         </button>
       </div>
@@ -54,11 +52,6 @@ import type { TimeRateRule } from '@/types'
 
 const model = defineModel<TimeRateRule[]>({ required: true })
 const { t } = useI18n()
-
-const endTimes = Array.from({ length: 24 * 4 }, (_, index) => {
-  const minutes = (index + 1) * 15
-  return minutes === 1440 ? '24:00' : `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
-})
 
 const minute = (value: string, allow24 = false): number | null => {
   if (allow24 && value === '24:00') return 1440

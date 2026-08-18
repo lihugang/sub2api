@@ -29,7 +29,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { SubscriptionType, GroupPlatform } from '@/types'
+import type { SubscriptionType, GroupPlatform, TimeRateRule } from '@/types'
 import { useAppStore } from '@/stores/app'
 import { formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
 import PlatformIcon from './PlatformIcon.vue'
@@ -44,6 +44,7 @@ interface Props {
   peakStart?: string
   peakEnd?: string
   peakRateMultiplier?: number
+  timeRateRules?: TimeRateRule[]
   showRate?: boolean
   daysRemaining?: number | null // 剩余天数（订阅类型时使用）
   /**
@@ -80,7 +81,7 @@ const hasCustomRate = computed(() => {
 const appStore = useAppStore()
 
 const hasPeakRate = computed(() => {
-  return Boolean(props.showRate && props.peakRateEnabled && props.peakStart && props.peakEnd)
+  return Boolean(props.showRate && (props.timeRateRules?.length || (props.peakRateEnabled && props.peakStart && props.peakEnd)))
 })
 
 const peakRateText = computed(() => {
@@ -89,7 +90,8 @@ const peakRateText = computed(() => {
       peak_rate_enabled: props.peakRateEnabled,
       peak_start: props.peakStart,
       peak_end: props.peakEnd,
-      peak_rate_multiplier: props.peakRateMultiplier
+      peak_rate_multiplier: props.peakRateMultiplier,
+      time_rate_rules: props.timeRateRules
     },
     serverTimezoneLabel(appStore.cachedPublicSettings?.server_utc_offset)
   )
