@@ -383,7 +383,6 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 	if len(timeRateRules) == 0 && peakRateEnabled {
 		timeRateRules = []TimeRateRule{{Start: peakStart, End: peakEnd, Multiplier: peakRateMultiplier}}
 	}
-	var err error
 	timeRateRules, err = NormalizeTimeRateRules(timeRateRules)
 	if err != nil {
 		return nil, err
