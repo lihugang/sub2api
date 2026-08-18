@@ -511,8 +511,15 @@ type UsageLog struct {
 	CacheCreation5mTokens int `json:"cache_creation_5m_tokens"`
 	CacheCreation1hTokens int `json:"cache_creation_1h_tokens"`
 
+	InputCost         float64 `json:"input_cost"`
+	OutputCost        float64 `json:"output_cost"`
+	CacheCreationCost float64 `json:"cache_creation_cost"`
+	CacheReadCost     float64 `json:"cache_read_cost"`
+	TotalCost         float64 `json:"total_cost"`
 	// ActualCost is the amount charged by this site and is visible to the user.
-	ActualCost float64 `json:"actual_cost"`
+	ActualCost                float64 `json:"actual_cost"`
+	RateMultiplier            float64 `json:"rate_multiplier"`
+	LongContextBillingApplied bool    `json:"long_context_billing_applied"`
 
 	BillingType  int8   `json:"billing_type"`
 	RequestType  string `json:"request_type"`
@@ -527,7 +534,9 @@ type UsageLog struct {
 	ImageInputSize     *string        `json:"image_input_size"`
 	ImageOutputSize    *string        `json:"image_output_size"`
 	ImageInputTokens   int            `json:"image_input_tokens"`
+	ImageInputCost     float64        `json:"image_input_cost"`
 	ImageOutputTokens  int            `json:"image_output_tokens"`
+	ImageOutputCost    float64        `json:"image_output_cost"`
 	ImageSizeSource    *string        `json:"image_size_source"`
 	ImageSizeBreakdown map[string]int `json:"image_size_breakdown"`
 	MediaType          *string        `json:"media_type"`
@@ -557,16 +566,6 @@ type UsageLog struct {
 // AdminUsageLog 是管理员接口使用的 usage log DTO（包含管理员字段）。
 type AdminUsageLog struct {
 	UsageLog
-
-	InputCost                 float64 `json:"input_cost"`
-	OutputCost                float64 `json:"output_cost"`
-	CacheCreationCost         float64 `json:"cache_creation_cost"`
-	CacheReadCost             float64 `json:"cache_read_cost"`
-	TotalCost                 float64 `json:"total_cost"`
-	RateMultiplier            float64 `json:"rate_multiplier"`
-	LongContextBillingApplied bool    `json:"long_context_billing_applied"`
-	ImageInputCost            float64 `json:"image_input_cost"`
-	ImageOutputCost           float64 `json:"image_output_cost"`
 
 	// UpstreamModel is the actual model sent to the upstream provider after mapping.
 	// Omitted when no mapping was applied (requested model was used as-is).
