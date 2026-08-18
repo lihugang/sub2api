@@ -63,6 +63,10 @@ func (Group) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
 			Default(1.0).
 			Comment("高峰时段叠加倍率，仅在 peak_rate_enabled 且处于 [peak_start, peak_end) 时乘入文本倍率"),
+		field.JSON("time_rate_rules", json.RawMessage{}).
+			Optional().
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
+			Comment("每日 Token 计费时段倍率规则，固定按 UTC+08:00 判断；空数组表示停用"),
 		field.Bool("is_exclusive").
 			Default(false),
 		field.String("status").

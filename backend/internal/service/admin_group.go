@@ -379,6 +379,15 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 	if err := ValidatePeakRateConfig(subscriptionType, peakRateEnabled, peakStart, peakEnd, peakRateMultiplier); err != nil {
 		return nil, err
 	}
+	timeRateRules := input.TimeRateRules
+	if len(timeRateRules) == 0 && peakRateEnabled {
+		timeRateRules = []TimeRateRule{{Start: peakStart, End: peakEnd, Multiplier: peakRateMultiplier}}
+	}
+	var err error
+	timeRateRules, err = NormalizeTimeRateRules(timeRateRules)
+	if err != nil {
+		return nil, err
+	}
 
 	profitMinMargin := 0.0
 	if input.ProfitMinMargin != nil {
@@ -477,6 +486,7 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		PeakStart:                       peakStart,
 		PeakEnd:                         peakEnd,
 		PeakRateMultiplier:              peakRateMultiplier,
+		TimeRateRules:                   timeRateRules,
 		ProfitControlEnabled:            profitControlEnabled,
 		ProfitMinMargin:                 profitMinMargin,
 		ProfitSafetyBuffer:              profitSafetyBuffer,
@@ -742,6 +752,13 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 	}
 	if input.PeakRateMultiplier != nil {
 		group.PeakRateMultiplier = *input.PeakRateMultiplier
+	}
+	if input.TimeRateRules != nil {
+		rules, err := NormalizeTimeRateRules(*input.TimeRateRules)
+		if err != nil {
+			return nil, err
+		}
+		group.TimeRateRules = rules
 	}
 	// 先归一化（非订阅分组——含本次更新转为非订阅——静默清空高峰配置，清洗停用状态下的脏字段），
 	// 再收敛校验：Update 可能只传部分 peak 字段，需对合并后的最终配置统一校验，

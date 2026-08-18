@@ -960,6 +960,13 @@ func groupEntityToService(g *dbent.Group) *service.Group {
 			modelPricing = nil
 		}
 	}
+	var timeRateRules []service.TimeRateRule
+	if len(g.TimeRateRules) > 0 {
+		if err := json.Unmarshal(g.TimeRateRules, &timeRateRules); err != nil {
+			slog.Warn("group time_rate_rules unmarshal failed; disabling scheduled pricing", "group_id", g.ID, "error", err)
+			timeRateRules = nil
+		}
+	}
 	return &service.Group{
 		ID:                              g.ID,
 		Name:                            g.Name,
@@ -1019,6 +1026,7 @@ func groupEntityToService(g *dbent.Group) *service.Group {
 		PeakStart:                       g.PeakStart,
 		PeakEnd:                         g.PeakEnd,
 		PeakRateMultiplier:              g.PeakRateMultiplier,
+		TimeRateRules:                   timeRateRules,
 		ProfitControlEnabled:            g.ProfitControlEnabled,
 		ProfitMinMargin:                 g.ProfitMinMargin,
 		ProfitSafetyBuffer:              g.ProfitSafetyBuffer,

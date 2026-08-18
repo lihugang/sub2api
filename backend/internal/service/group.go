@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -27,6 +28,9 @@ type Group struct {
 	PeakStart          string
 	PeakEnd            string
 	PeakRateMultiplier float64
+	// TimeRateRules is the canonical daily token-rate schedule. Times are
+	// HH:MM in UTC+08:00; an empty list disables scheduled pricing.
+	TimeRateRules []TimeRateRule
 	IsExclusive        bool
 	Status             string
 	Hydrated           bool // indicates the group was loaded from a trusted repository source
@@ -131,6 +135,83 @@ type Group struct {
 	AccountCount            int64
 	ActiveAccountCount      int64
 	RateLimitedAccountCount int64
+}
+
+// TimeRateRule is a non-overlapping, left-closed/right-open daily interval.
+type TimeRateRule struct {
+	Start      string  `json:"start"`
+	End        string  `json:"end"`
+	Multiplier float64 `json:"multiplier"`
+}
+
+const TimeRateTimezone = "UTC+08:00"
+
+func normalizeTimeRateRules(rules []TimeRateRule) ([]TimeRateRule, error) {
+	if len(rules) == 0 {
+		return []TimeRateRule{}, nil
+	}
+	out := make([]TimeRateRule, len(rules))
+	copy(out, rules)
+	for i := range out {
+		start, ok := parseTimeRateMinute(out[i].Start, false)
+		if !ok {
+			return nil, fmt.Errorf("time_rate_rules[%d].start must be HH:MM", i)
+		}
+		end, ok := parseTimeRateMinute(out[i].End, true)
+		if !ok || start >= end {
+			return nil, fmt.Errorf("time_rate_rules[%d] must have start < end", i)
+		}
+		if out[i].Multiplier < 0 || math.IsNaN(out[i].Multiplier) || math.IsInf(out[i].Multiplier, 0) {
+			return nil, fmt.Errorf("time_rate_rules[%d].multiplier must be finite and non-negative", i)
+		}
+		out[i].Start = formatTimeRateMinute(start)
+		out[i].End = formatTimeRateMinute(end)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Start < out[j].Start })
+	for i := 1; i < len(out); i++ {
+		prevEnd, _ := parseTimeRateMinute(out[i-1].End, true)
+		curStart, _ := parseTimeRateMinute(out[i].Start, false)
+		if curStart < prevEnd {
+			return nil, fmt.Errorf("time_rate_rules overlap between %s-%s and %s-%s", out[i-1].Start, out[i-1].End, out[i].Start, out[i].End)
+		}
+	}
+	return out, nil
+}
+
+func parseTimeRateMinute(value string, allow24 bool) (int, bool) {
+	if allow24 && value == "24:00" {
+		return 1440, true
+	}
+	return parseMinutes(value)
+}
+
+func formatTimeRateMinute(minutes int) string {
+	if minutes == 1440 {
+		return "24:00"
+	}
+	return fmt.Sprintf("%02d:%02d", minutes/60, minutes%60)
+}
+
+// NormalizeTimeRateRules validates and canonicalizes a schedule for storage.
+func NormalizeTimeRateRules(rules []TimeRateRule) ([]TimeRateRule, error) {
+	return normalizeTimeRateRules(rules)
+}
+
+// TimeRateMultiplierAt returns the scheduled multiplier at a UTC+08:00 instant.
+func (g *Group) TimeRateMultiplierAt(now time.Time) float64 {
+	if g == nil || len(g.TimeRateRules) == 0 {
+		return 1
+	}
+	local := now.UTC().Add(8 * time.Hour)
+	minute := local.Hour()*60 + local.Minute()
+	for _, rule := range g.TimeRateRules {
+		start, okStart := parseTimeRateMinute(rule.Start, false)
+		end, okEnd := parseTimeRateMinute(rule.End, true)
+		if okStart && okEnd && minute >= start && minute < end {
+			return rule.Multiplier
+		}
+	}
+	return 1
 }
 
 func (g *Group) IsActive() bool {
@@ -299,6 +380,9 @@ func parseMinutes(hhmm string) (int, bool) {
 //
 // 该方法是纯函数，不读取任何外部状态，便于单测。
 func (g *Group) PeakMultiplierAt(now time.Time) float64 {
+	if g != nil && len(g.TimeRateRules) > 0 {
+		return g.TimeRateMultiplierAt(now)
+	}
 	if g == nil || !g.IsSubscriptionType() || !g.PeakRateEnabled || g.PeakStart == "" || g.PeakEnd == "" {
 		return 1.0
 	}

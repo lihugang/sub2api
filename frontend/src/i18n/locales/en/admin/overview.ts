@@ -1034,6 +1034,18 @@ export default {
         peakMultiplier: 'Peak multiplier',
         multiplierHint: 'Applies to token billing multiplier; image tokens in token billing are also affected. 0 means peak token requests are billed at 0x.'
       },
+      timeRate: {
+        title: 'Daily time-based multiplier',
+        hint: 'Uses UTC+08:00 and affects token billing only. Uncovered time is billed at 1x; remove all rules to disable.',
+        start: 'Start',
+        end: 'End',
+        multiplier: 'Multiplier',
+        add: 'Add interval',
+        remove: 'Remove interval',
+        empty: 'No intervals configured. Time-based pricing is disabled.',
+        invalid: 'Check the time range and multiplier; end time must be later than start time.',
+        overlap: 'Intervals cannot overlap. Adjust the conflicting rules.'
+      },
       profitControl: {
         enable: 'Enable profit control',
         enabledHint: 'Scheduling only admits accounts whose account multiplier ≤ the request\'s effective downstream multiplier × (1 − min margin − safety buffer). Account multipliers may be maintained manually or synchronized from probes; existing ordering, stickiness and breakers keep working among qualified accounts. Image/video scheduling is not covered yet.',

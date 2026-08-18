@@ -1031,6 +1031,18 @@ export default {
         peakMultiplier: '高峰倍率',
         multiplierHint: '作用于 token 计费倍率；token 计费的图片 token 同样适用，0 表示高峰 token 请求按 0 倍计费'
       },
+      timeRate: {
+        title: '每日时段倍率',
+        hint: '固定按东八区计算，仅影响 Token 计费；未覆盖时段为 1 倍，删除全部规则即可停用。',
+        start: '开始',
+        end: '结束',
+        multiplier: '倍率',
+        add: '添加时段',
+        remove: '删除时段',
+        empty: '暂无时段规则，当前不启用时段倍率。',
+        invalid: '请检查时间范围和倍率；结束时间必须晚于开始时间。',
+        overlap: '时段不能重叠，请调整冲突规则。'
+      },
       profitControl: {
         enable: '启用利润控制',
         enabledHint: '调度时仅允许"账号倍率 ≤ 请求实际下游倍率 ×（1 − 最低毛利率 − 安全缓冲）"的账号进入候选池；账号倍率可手工维护或由探测同步，既有排序、粘性与熔断在合格账号间照常工作。图片/视频调度暂不参与。',
