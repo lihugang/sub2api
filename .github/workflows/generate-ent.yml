@@ -23,7 +23,12 @@ jobs:
           cache-dependency-path: backend/go.sum
 
       - name: Verify Go version
-        run: go version | grep -q 'go1.26.5'
+        working-directory: backend
+        run: |
+          # 跟随 go.mod 的 go 指令校验，避免上游升 Go 版本后这里的硬编码过期。
+          expected_version=$(awk '/^go /{print $2; exit}' go.mod)
+          echo "go.mod requires go${expected_version}"
+          go version | grep -q "go${expected_version}"
 
       - name: Generate Ent code
         working-directory: backend
