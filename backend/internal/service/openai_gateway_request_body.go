@@ -2243,16 +2243,18 @@ func normalizeOpenAIReasoningEffort(raw string) string {
 	}
 }
 
-// isDeepSeekModel 判断是否 DeepSeek 系列模型；入参可为原始模型名
+// isDeepSeekModelFamily 判断是否 DeepSeek 系列模型；入参可为原始模型名
 // （含大小写/路径变体），与 thinking 协议等处的厂商前缀判定保持一致。
-func isDeepSeekModel(model string) bool {
+// 计费侧另有 billing_service.go 的 isDeepSeekModel（只做前缀匹配），
+// 这里额外去掉路径前缀以兼容 openai/deepseek-* 这类写法，故独立命名。
+func isDeepSeekModelFamily(model string) bool {
 	return strings.HasPrefix(strings.ToLower(lastOpenAIModelSegment(model)), "deepseek-")
 }
 
 func normalizeOpenAIReasoningEffortForModel(raw, model string) string {
 	// 上游按模型族判定 max 档；本地额外放行全部 deepseek-* 模型（allow deepseek max）。
 	if strings.EqualFold(strings.TrimSpace(raw), "max") &&
-		(supportsOpenAIReasoningEffortMax(model) || isDeepSeekModel(model)) {
+		(supportsOpenAIReasoningEffortMax(model) || isDeepSeekModel(model) || isDeepSeekModelFamily(model)) {
 		return "max"
 	}
 	return normalizeOpenAIReasoningEffort(raw)
