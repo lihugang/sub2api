@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"encoding/json"
 	"encoding/json/jsontext"
 	"errors"
 	"fmt"
