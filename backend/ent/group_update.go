@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"encoding/json"
 	"encoding/json/jsontext"
 	"errors"
 	"fmt"
@@ -183,13 +182,13 @@ func (_u *GroupUpdate) AddPeakRateMultiplier(v float64) *GroupUpdate {
 }
 
 // SetTimeRateRules sets the "time_rate_rules" field.
-func (_u *GroupUpdate) SetTimeRateRules(v json.RawMessage) *GroupUpdate {
+func (_u *GroupUpdate) SetTimeRateRules(v jsontext.Value) *GroupUpdate {
 	_u.mutation.SetTimeRateRules(v)
 	return _u
 }
 
 // AppendTimeRateRules appends value to the "time_rate_rules" field.
-func (_u *GroupUpdate) AppendTimeRateRules(v json.RawMessage) *GroupUpdate {
+func (_u *GroupUpdate) AppendTimeRateRules(v jsontext.Value) *GroupUpdate {
 	_u.mutation.AppendTimeRateRules(v)
 	return _u
 }
@@ -2406,13 +2405,13 @@ func (_u *GroupUpdateOne) AddPeakRateMultiplier(v float64) *GroupUpdateOne {
 }
 
 // SetTimeRateRules sets the "time_rate_rules" field.
-func (_u *GroupUpdateOne) SetTimeRateRules(v json.RawMessage) *GroupUpdateOne {
+func (_u *GroupUpdateOne) SetTimeRateRules(v jsontext.Value) *GroupUpdateOne {
 	_u.mutation.SetTimeRateRules(v)
 	return _u
 }
 
 // AppendTimeRateRules appends value to the "time_rate_rules" field.
-func (_u *GroupUpdateOne) AppendTimeRateRules(v json.RawMessage) *GroupUpdateOne {
+func (_u *GroupUpdateOne) AppendTimeRateRules(v jsontext.Value) *GroupUpdateOne {
 	_u.mutation.AppendTimeRateRules(v)
 	return _u
 }

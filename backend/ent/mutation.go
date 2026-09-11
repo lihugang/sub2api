@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"encoding/json"
 	"encoding/json/jsontext"
 	"errors"
 	"fmt"
@@ -22255,8 +22254,8 @@ type GroupMutation struct {
 	peak_end                                *string
 	peak_rate_multiplier                    *float64
 	addpeak_rate_multiplier                 *float64
-	time_rate_rules                         *json.RawMessage
-	appendtime_rate_rules                   json.RawMessage
+	time_rate_rules                         *jsontext.Value
+	appendtime_rate_rules                   jsontext.Value
 	is_exclusive                            *bool
 	status                                  *string
 	duplicate_operation_id                  *string
@@ -22890,13 +22889,13 @@ func (m *GroupMutation) ResetPeakRateMultiplier() {
 }
 
 // SetTimeRateRules sets the "time_rate_rules" field.
-func (m *GroupMutation) SetTimeRateRules(jm json.RawMessage) {
-	m.time_rate_rules = &jm
+func (m *GroupMutation) SetTimeRateRules(j jsontext.Value) {
+	m.time_rate_rules = &j
 	m.appendtime_rate_rules = nil
 }
 
 // TimeRateRules returns the value of the "time_rate_rules" field in the mutation.
-func (m *GroupMutation) TimeRateRules() (r json.RawMessage, exists bool) {
+func (m *GroupMutation) TimeRateRules() (r jsontext.Value, exists bool) {
 	v := m.time_rate_rules
 	if v == nil {
 		return
@@ -22907,7 +22906,7 @@ func (m *GroupMutation) TimeRateRules() (r json.RawMessage, exists bool) {
 // OldTimeRateRules returns the old "time_rate_rules" field's value of the Group entity.
 // If the Group object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *GroupMutation) OldTimeRateRules(ctx context.Context) (v json.RawMessage, err error) {
+func (m *GroupMutation) OldTimeRateRules(ctx context.Context) (v jsontext.Value, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldTimeRateRules is only allowed on UpdateOne operations")
 	}
@@ -22921,13 +22920,13 @@ func (m *GroupMutation) OldTimeRateRules(ctx context.Context) (v json.RawMessage
 	return oldValue.TimeRateRules, nil
 }
 
-// AppendTimeRateRules adds jm to the "time_rate_rules" field.
-func (m *GroupMutation) AppendTimeRateRules(jm json.RawMessage) {
-	m.appendtime_rate_rules = append(m.appendtime_rate_rules, jm...)
+// AppendTimeRateRules adds j to the "time_rate_rules" field.
+func (m *GroupMutation) AppendTimeRateRules(j jsontext.Value) {
+	m.appendtime_rate_rules = append(m.appendtime_rate_rules, j...)
 }
 
 // AppendedTimeRateRules returns the list of values that were appended to the "time_rate_rules" field in this mutation.
-func (m *GroupMutation) AppendedTimeRateRules() (json.RawMessage, bool) {
+func (m *GroupMutation) AppendedTimeRateRules() (jsontext.Value, bool) {
 	if len(m.appendtime_rate_rules) == 0 {
 		return nil, false
 	}
@@ -26150,7 +26149,7 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 66)
+	fields := make([]string, 0, 67)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -26717,7 +26716,7 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 		m.SetPeakRateMultiplier(v)
 		return nil
 	case group.FieldTimeRateRules:
-		v, ok := value.(json.RawMessage)
+		v, ok := value.(jsontext.Value)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -51071,7 +51070,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 25)
+	fields := make([]string, 0, 26)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}

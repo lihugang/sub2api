@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"encoding/json"
 	"encoding/json/jsontext"
 	"errors"
 	"fmt"
@@ -164,7 +163,7 @@ func (_c *GroupCreate) SetNillablePeakRateMultiplier(v *float64) *GroupCreate {
 }
 
 // SetTimeRateRules sets the "time_rate_rules" field.
-func (_c *GroupCreate) SetTimeRateRules(v json.RawMessage) *GroupCreate {
+func (_c *GroupCreate) SetTimeRateRules(v jsontext.Value) *GroupCreate {
 	_c.mutation.SetTimeRateRules(v)
 	return _c
 }
@@ -2009,7 +2008,7 @@ func (u *GroupUpsert) AddPeakRateMultiplier(v float64) *GroupUpsert {
 }
 
 // SetTimeRateRules sets the "time_rate_rules" field.
-func (u *GroupUpsert) SetTimeRateRules(v json.RawMessage) *GroupUpsert {
+func (u *GroupUpsert) SetTimeRateRules(v jsontext.Value) *GroupUpsert {
 	u.Set(group.FieldTimeRateRules, v)
 	return u
 }
@@ -3153,7 +3152,7 @@ func (u *GroupUpsertOne) UpdatePeakRateMultiplier() *GroupUpsertOne {
 }
 
 // SetTimeRateRules sets the "time_rate_rules" field.
-func (u *GroupUpsertOne) SetTimeRateRules(v json.RawMessage) *GroupUpsertOne {
+func (u *GroupUpsertOne) SetTimeRateRules(v jsontext.Value) *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.SetTimeRateRules(v)
 	})
@@ -4620,7 +4619,7 @@ func (u *GroupUpsertBulk) UpdatePeakRateMultiplier() *GroupUpsertBulk {
 }
 
 // SetTimeRateRules sets the "time_rate_rules" field.
-func (u *GroupUpsertBulk) SetTimeRateRules(v json.RawMessage) *GroupUpsertBulk {
+func (u *GroupUpsertBulk) SetTimeRateRules(v jsontext.Value) *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.SetTimeRateRules(v)
 	})

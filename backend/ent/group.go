@@ -41,7 +41,7 @@ type Group struct {
 	// 高峰时段叠加倍率，仅在 peak_rate_enabled 且处于 [peak_start, peak_end) 时乘入文本倍率
 	PeakRateMultiplier float64 `json:"peak_rate_multiplier,omitempty"`
 	// 每日 Token 计费时段倍率规则，固定按 UTC+08:00 判断；空数组表示停用
-	TimeRateRules json.RawMessage `json:"time_rate_rules,omitempty"`
+	TimeRateRules jsontext.Value `json:"time_rate_rules,omitempty"`
 	// IsExclusive holds the value of the "is_exclusive" field.
 	IsExclusive bool `json:"is_exclusive,omitempty"`
 	// Status holds the value of the "status" field.
