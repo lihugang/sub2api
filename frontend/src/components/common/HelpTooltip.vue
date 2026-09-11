@@ -34,7 +34,8 @@ function isInside(container: HTMLElement | null, target: EventTarget | null): bo
 }
 
 // 悬停模式下指针在触发图标与提示框之间往返时保持打开，便于选中提示里的文字。
-function onLeave(event: MouseEvent) {
+// 同一处理函数也挂在 @focusout（键盘可达性）上，所以事件类型需兼容 FocusEvent。
+function onLeave(event: MouseEvent | FocusEvent) {
   if (props.trigger !== 'hover') return
   if (isInside(tooltipRef.value, event.relatedTarget)) return
   closeTooltip()

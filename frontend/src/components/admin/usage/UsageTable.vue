@@ -628,13 +628,13 @@ const ipGeoBatchLoading = ref(false)
 
 const showIpGeoToolbar = computed(() => props.columns.some((col) => col.key === 'ip_address'))
 
-const hasReasoningEffortMapping = (row: AdminUsageLog): boolean => {
+const hasReasoningEffortMapping = (row: UsageTableRow): boolean => {
   const requested = row.reasoning_effort?.trim() || ''
   const forwarded = row.upstream_reasoning_effort?.trim() || ''
   return requested !== '' && forwarded !== '' && !reasoningEffortValuesEqual(requested, forwarded)
 }
 
-const sentUpstreamModel = (row: AdminUsageLog): string => row.upstream_model?.trim() || row.model?.trim() || ''
+const sentUpstreamModel = (row: UsageTableRow): string => row.upstream_model?.trim() || row.model?.trim() || ''
 
 const normalizeModelVariant = (model: string): string => model
   .trim()
