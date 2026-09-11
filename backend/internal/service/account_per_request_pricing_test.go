@@ -6,6 +6,7 @@ import (
 	"context"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -66,7 +67,7 @@ func TestResolveAccountStatsCostUsesAccountPerRequestPriceBeforeChannelRules(t *
 		AccountStatsPricingRules: []AccountStatsPricingRule{{
 			AccountIDs: []int64{42},
 			Pricing: []ChannelModelPricing{{
-				Models:     []string{"gpt-5.4"},
+				Models:      []string{"gpt-5.4"},
 				BillingMode: BillingModePerRequest,
 				PerRequestPrice: func() *float64 {
 					price := 99.0
@@ -77,8 +78,7 @@ func TestResolveAccountStatsCostUsesAccountPerRequestPriceBeforeChannelRules(t *
 	}
 	cs := newTestChannelServiceForStats(t, channel, 10, "openai")
 
-	cost := resolveAccountStatsCost(context.Background(), cs, nil, account.ID, 10, "gpt-5.4", UsageTokens{}, 1, 99, account)
+	cost := resolveAccountStatsCostWithAccount(account, context.Background(), cs, nil, account.ID, 10, "gpt-5.4", UsageTokens{}, 1, 99, "", time.Time{})
 	require.NotNil(t, cost)
 	require.InDelta(t, 0.07, *cost, 1e-12)
 }
-
