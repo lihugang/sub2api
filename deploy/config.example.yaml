@@ -1082,6 +1082,9 @@ plugins:
 # 定价数据源（可选）
 # =============================================================================
 pricing:
+  # Temporarily disabled: use the bundled pricing catalog and local overrides.
+  # 暂时关闭远程同步：使用仓库内置目录与本地覆盖文件；显式开启后才访问下方 URL。
+  remote_sync_enabled: false
   # URL to fetch model pricing data (default: model-price-repo main branch)
   # 获取模型定价数据的 URL（默认：model-price-repo main 分支）
   remote_url: "https://raw.githubusercontent.com/Wei-Shaw/model-price-repo/refs/heads/main//model_prices_and_context_window.json"

@@ -339,10 +339,10 @@ func (s *PricingService) startUpdateScheduler() {
 	if s == nil || s.cfg == nil {
 		return
 	}
-	remoteEnabled := strings.TrimSpace(s.cfg.Pricing.RemoteURL) != ""
+	remoteEnabled := s.remotePricingSyncEnabled()
 	watchCustom := s.hasCustomPricingFiles()
 	if !remoteEnabled {
-		logger.LegacyPrintf("service.pricing", "%s", "[Pricing] Remote sync disabled: pricing remote URL is empty")
+		logger.LegacyPrintf("service.pricing", "%s", "[Pricing] Remote sync disabled; using local pricing files")
 	}
 	if !remoteEnabled && !watchCustom {
 		return
@@ -381,6 +381,9 @@ func (s *PricingService) startUpdateScheduler() {
 
 // checkAndUpdatePricing 检查并更新价格数据
 func (s *PricingService) checkAndUpdatePricing() error {
+	if !s.remotePricingSyncEnabled() {
+		return s.useFallbackPricing()
+	}
 	pricingFile := s.getPricingFilePath()
 
 	// 检查本地文件是否存在
@@ -438,6 +441,9 @@ func (s *PricingService) checkAndUpdatePricing() error {
 
 // syncWithRemote 与远程同步（基于哈希校验）
 func (s *PricingService) syncWithRemote() error {
+	if !s.remotePricingSyncEnabled() {
+		return nil
+	}
 	// 如果配置了哈希URL，从远程获取哈希进行比对
 	if s.cfg.Pricing.HashURL != "" {
 		remoteHash, err := s.fetchRemoteHash()
@@ -549,6 +555,9 @@ func (s *PricingService) reloadIfCustomFilesChanged() {
 // 与叠加层指纹。
 func (s *PricingService) reloadCustomPricingLayers() error {
 	pricingFile := s.getPricingFilePath()
+	if !s.remotePricingSyncEnabled() && strings.TrimSpace(s.cfg.Pricing.FallbackFile) != "" {
+		pricingFile = s.cfg.Pricing.FallbackFile
+	}
 	// 定价层文件可能在读取期间被替换。只有构建前后指纹一致时才提交，
 	// 否则丢弃这次混合快照并重试，避免短暂应用不匹配的 fallback/override。
 	var data map[string]*LiteLLMModelPricing
@@ -591,6 +600,9 @@ func (s *PricingService) reloadCustomPricingLayers() error {
 
 // downloadPricingData 从远程下载价格数据
 func (s *PricingService) downloadPricingData() error {
+	if !s.remotePricingSyncEnabled() {
+		return s.useFallbackPricing()
+	}
 	remoteURL, err := s.validatePricingURL(s.cfg.Pricing.RemoteURL)
 	if err != nil {
 		return err
@@ -665,7 +677,6 @@ func (s *PricingService) parsePricingData(body []byte) (map[string]*LiteLLMModel
 	if err := json.Unmarshal(body, &rawData); err != nil {
 		return nil, fmt.Errorf("parse raw JSON: %w", err)
 	}
-	correctLegacyGPT56SolPricing(rawData)
 	rawData = s.applyPricingOverrides(rawData)
 
 	result := make(map[string]*LiteLLMModelPricing)
@@ -922,39 +933,6 @@ func warnOrphanCacheTierFields(entries []string) {
 		entries = append(entries[:20], "...")
 	}
 	logger.LegacyPrintf("service.pricing", "[Pricing] Warning: %d model(s) carry cache above-tier prices without a base cache price; that cache item bills at $0 until the catalog/override supplies the base: %s", total, strings.Join(entries, ", "))
-}
-
-// correctLegacyGPT56SolPricing updates the known pre-promotion snapshot still
-// served by the default remote catalog. Newer rates are left intact, and explicit
-// operator overrides are applied afterward. Checked against the official API
-// price sheet on 2026-10-07; the promotion lasts at least through 2026-11-21.
-func correctLegacyGPT56SolPricing(data map[string]json.RawMessage) {
-	for model, raw := range data {
-		if normalizeKnownOpenAICodexModel(model) != "gpt-5.6-sol" {
-			continue
-		}
-		var entry map[string]any
-		if json.Unmarshal(raw, &entry) != nil || entry["input_cost_per_token"] != float64(5e-6) || entry["output_cost_per_token"] != float64(30e-6) {
-			continue
-		}
-		for field, value := range entry {
-			price, ok := value.(float64)
-			if !ok {
-				continue
-			}
-			switch {
-			case field == "output_cost_per_token" || strings.HasPrefix(field, "output_cost_per_token_"):
-				entry[field] = price * 2 / 3
-			case field == "input_cost_per_token" || strings.HasPrefix(field, "input_cost_per_token_"),
-				field == "cache_read_input_token_cost" || strings.HasPrefix(field, "cache_read_input_token_cost_"),
-				field == "cache_creation_input_token_cost" || strings.HasPrefix(field, "cache_creation_input_token_cost_"):
-				entry[field] = price * 4 / 5
-			}
-		}
-		if updated, err := json.Marshal(entry); err == nil {
-			data[model] = updated
-		}
-	}
 }
 
 // applyPricingOverrides 把 override 文件的条目逐字段修补进原始目录数据。目录与回退
@@ -1754,7 +1732,14 @@ func (s *PricingService) GetStatus() map[string]any {
 
 // ForceUpdate 强制更新
 func (s *PricingService) ForceUpdate() error {
+	if !s.remotePricingSyncEnabled() {
+		return s.useFallbackPricing()
+	}
 	return s.downloadPricingData()
+}
+
+func (s *PricingService) remotePricingSyncEnabled() bool {
+	return s != nil && s.cfg != nil && s.cfg.Pricing.RemoteSyncEnabled && strings.TrimSpace(s.cfg.Pricing.RemoteURL) != ""
 }
 
 // getPricingFilePath 获取价格文件路径

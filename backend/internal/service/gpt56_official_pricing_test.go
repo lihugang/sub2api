@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -65,46 +64,4 @@ func TestGPT56OfficialBillingAcrossSourcesTiersAndBoundary(t *testing.T) {
 			})
 		}
 	}
-}
-
-func TestGPT56LegacyRemoteCatalogCorrectionAndOverride(t *testing.T) {
-	legacy := `{"gpt-5.6-sol":{"litellm_provider":"openai","input_cost_per_token":0.000005,"output_cost_per_token":0.00003,"input_cost_per_token_priority":0.00001,"output_cost_per_token_priority":0.00006,"cache_creation_input_token_cost":0.00000625,"cache_read_input_token_cost":0.0000005,"input_cost_per_token_above_272k_tokens":0.00001,"output_cost_per_token_above_272k_tokens":0.000045,"input_cost_per_token_flex":0.0000025,"output_cost_per_token_batches":0.000015}}`
-	svc := &PricingService{}
-	data, err := svc.parsePricingData([]byte(legacy))
-	require.NoError(t, err)
-	p := data["gpt-5.6-sol"]
-	require.InDelta(t, 4e-6, p.InputCostPerToken, 1e-12)
-	require.InDelta(t, 20e-6, p.OutputCostPerToken, 1e-12)
-	require.InDelta(t, 8e-6, p.InputCostPerTokenPriority, 1e-12)
-	require.InDelta(t, 40e-6, p.OutputCostPerTokenPriority, 1e-12)
-	require.InDelta(t, 5e-6, p.CacheCreationInputTokenCost, 1e-12)
-	require.InDelta(t, .4e-6, p.CacheReadInputTokenCost, 1e-12)
-	require.Equal(t, 272000, p.LongContextInputTokenThreshold)
-	require.InDelta(t, 2, p.LongContextInputCostMultiplier, 1e-12)
-	require.InDelta(t, 1.5, p.LongContextOutputCostMultiplier, 1e-12)
-	// A second load is idempotent, and new upstream prices are not rewritten.
-	raw := map[string]json.RawMessage{}
-	require.NoError(t, json.Unmarshal([]byte(legacy), &raw))
-	correctLegacyGPT56SolPricing(raw)
-	once := string(raw["gpt-5.6-sol"])
-	correctLegacyGPT56SolPricing(raw)
-	require.Equal(t, once, string(raw["gpt-5.6-sol"]))
-	require.Contains(t, once, `"output_cost_per_token_batches":0.00001`)
-	for _, override := range []string{`{"gpt-5.6-sol":{"input_cost_per_token":0.000009,"output_cost_per_token":0.00007,"long_context_input_token_threshold":0}}`, `{"gpt-5.6-sol":{"input_cost_per_token":0.000005,"output_cost_per_token":0.00003,"long_context_input_token_threshold":0}}`} {
-		svc := newPricingServiceWithOverride(t, override)
-		data, err := svc.parsePricingData([]byte(legacy))
-		require.NoError(t, err)
-		var expected map[string]struct {
-			Input  float64 `json:"input_cost_per_token"`
-			Output float64 `json:"output_cost_per_token"`
-		}
-		require.NoError(t, json.Unmarshal([]byte(override), &expected))
-		require.InDelta(t, expected["gpt-5.6-sol"].Input, data["gpt-5.6-sol"].InputCostPerToken, 1e-12)
-		require.InDelta(t, expected["gpt-5.6-sol"].Output, data["gpt-5.6-sol"].OutputCostPerToken, 1e-12)
-		require.Zero(t, data["gpt-5.6-sol"].LongContextInputTokenThreshold)
-	}
-	newer := `{"gpt-5.6-sol":{"input_cost_per_token":0.000003,"output_cost_per_token":0.000015}}`
-	data, err = svc.parsePricingData([]byte(newer))
-	require.NoError(t, err)
-	require.InDelta(t, 3e-6, data["gpt-5.6-sol"].InputCostPerToken, 1e-12)
 }

@@ -31,8 +31,9 @@ func TestPricingSchedulerBlankRemoteURLDoesNotStart(t *testing.T) {
 
 func TestPricingNonEmptyInvalidRemoteURLStillReturnsValidationError(t *testing.T) {
 	svc := NewPricingService(&config.Config{Pricing: config.PricingConfig{
-		RemoteURL: "://invalid",
-		DataDir:   t.TempDir(),
+		RemoteSyncEnabled: true,
+		RemoteURL:         "://invalid",
+		DataDir:           t.TempDir(),
 	}}, nil)
 
 	err := svc.ForceUpdate()

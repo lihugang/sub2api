@@ -32,6 +32,8 @@ func newHotReloadPricingService(t *testing.T, fallbackJSON, overrideJSON string)
 	t.Helper()
 	dir := t.TempDir()
 	svc := &PricingService{cfg: &config.Config{}}
+	svc.cfg.Pricing.RemoteSyncEnabled = true
+	svc.cfg.Pricing.RemoteURL = "https://example.com/pricing.json"
 	svc.cfg.Pricing.DataDir = dir
 	require.NoError(t, os.WriteFile(svc.getPricingFilePath(), []byte(hotReloadCatalogJSON), 0644))
 	if fallbackJSON != "" {
