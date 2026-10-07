@@ -139,19 +139,29 @@ var (
 		CacheReadInputTokenCost: 0.2e-6,
 		LiteLLMProvider:         "anthropic", Mode: "chat", SupportsPromptCaching: true,
 	}
+	// OpenAI API pricing, checked 2026-10-07; Sol promotion lasts at least through 2026-11-21.
+	// https://developers.openai.com/api/docs/pricing
+	openAIGPT56CyberFallbackPricing = &LiteLLMModelPricing{
+		InputCostPerToken: 12.5e-6, CacheReadInputTokenCost: 1.25e-6,
+		CacheCreationInputTokenCost: 15.625e-6, OutputCostPerToken: 75e-6,
+		LiteLLMProvider: "openai", Mode: "chat", SupportsPromptCaching: true,
+	}
 	openAIGPT56SolFallbackPricing = &LiteLLMModelPricing{
-		InputCostPerToken:                   5e-06,
-		InputCostPerTokenPriority:           1e-05,
-		OutputCostPerToken:                  3e-05,
-		OutputCostPerTokenPriority:          6e-05,
-		CacheCreationInputTokenCost:         6.25e-06,
-		CacheCreationInputTokenCostPriority: 1.25e-05,
-		CacheReadInputTokenCost:             5e-07,
-		CacheReadInputTokenCostPriority:     1e-06,
+		InputCostPerToken:                   4e-6,
+		InputCostPerTokenPriority:           8e-6,
+		OutputCostPerToken:                  20e-6,
+		OutputCostPerTokenPriority:          40e-6,
+		CacheCreationInputTokenCost:         5e-6,
+		CacheCreationInputTokenCostPriority: 10e-6,
+		CacheReadInputTokenCost:             0.4e-6,
+		CacheReadInputTokenCostPriority:     0.8e-6,
 		SupportsServiceTier:                 true,
 		LiteLLMProvider:                     "openai",
 		Mode:                                "chat",
 		SupportsPromptCaching:               true,
+		LongContextInputTokenThreshold:      272_000,
+		LongContextInputCostMultiplier:      2,
+		LongContextOutputCostMultiplier:     1.5,
 	}
 	openAIGPT56TerraFallbackPricing = &LiteLLMModelPricing{
 		InputCostPerToken:                   2e-06,
@@ -166,6 +176,9 @@ var (
 		LiteLLMProvider:                     "openai",
 		Mode:                                "chat",
 		SupportsPromptCaching:               true,
+		LongContextInputTokenThreshold:      272_000,
+		LongContextInputCostMultiplier:      2,
+		LongContextOutputCostMultiplier:     1.5,
 	}
 	openAIGPT56LunaFallbackPricing = &LiteLLMModelPricing{
 		InputCostPerToken:                   2e-07,
@@ -180,6 +193,9 @@ var (
 		LiteLLMProvider:                     "openai",
 		Mode:                                "chat",
 		SupportsPromptCaching:               true,
+		LongContextInputTokenThreshold:      272_000,
+		LongContextInputCostMultiplier:      2,
+		LongContextOutputCostMultiplier:     1.5,
 	}
 	openAIGPT54MiniFallbackPricing = &LiteLLMModelPricing{
 		InputCostPerToken:       7.5e-07,
@@ -649,6 +665,7 @@ func (s *PricingService) parsePricingData(body []byte) (map[string]*LiteLLMModel
 	if err := json.Unmarshal(body, &rawData); err != nil {
 		return nil, fmt.Errorf("parse raw JSON: %w", err)
 	}
+	correctLegacyGPT56SolPricing(rawData)
 	rawData = s.applyPricingOverrides(rawData)
 
 	result := make(map[string]*LiteLLMModelPricing)
@@ -905,6 +922,39 @@ func warnOrphanCacheTierFields(entries []string) {
 		entries = append(entries[:20], "...")
 	}
 	logger.LegacyPrintf("service.pricing", "[Pricing] Warning: %d model(s) carry cache above-tier prices without a base cache price; that cache item bills at $0 until the catalog/override supplies the base: %s", total, strings.Join(entries, ", "))
+}
+
+// correctLegacyGPT56SolPricing updates the known pre-promotion snapshot still
+// served by the default remote catalog. Newer rates are left intact, and explicit
+// operator overrides are applied afterward. Checked against the official API
+// price sheet on 2026-10-07; the promotion lasts at least through 2026-11-21.
+func correctLegacyGPT56SolPricing(data map[string]json.RawMessage) {
+	for model, raw := range data {
+		if normalizeKnownOpenAICodexModel(model) != "gpt-5.6-sol" {
+			continue
+		}
+		var entry map[string]any
+		if json.Unmarshal(raw, &entry) != nil || entry["input_cost_per_token"] != float64(5e-6) || entry["output_cost_per_token"] != float64(30e-6) {
+			continue
+		}
+		for field, value := range entry {
+			price, ok := value.(float64)
+			if !ok {
+				continue
+			}
+			switch {
+			case field == "output_cost_per_token" || strings.HasPrefix(field, "output_cost_per_token_"):
+				entry[field] = price * 2 / 3
+			case field == "input_cost_per_token" || strings.HasPrefix(field, "input_cost_per_token_"),
+				field == "cache_read_input_token_cost" || strings.HasPrefix(field, "cache_read_input_token_cost_"),
+				field == "cache_creation_input_token_cost" || strings.HasPrefix(field, "cache_creation_input_token_cost_"):
+				entry[field] = price * 4 / 5
+			}
+		}
+		if updated, err := json.Marshal(entry); err == nil {
+			data[model] = updated
+		}
+	}
 }
 
 // applyPricingOverrides 把 override 文件的条目逐字段修补进原始目录数据。目录与回退
@@ -1553,6 +1603,14 @@ func (s *PricingService) matchOpenAIModel(model string) *LiteLLMModelPricing {
 			return openAIGPT6SolFallbackPricing
 		}
 		return openAIGPT6LunaFallbackPricing
+	}
+
+	// Cyber has its own price; never reduce it to the bare GPT-5.6/Sol alias.
+	if normalizeKnownOpenAICodexModel(model) == "gpt-5.6-cyber" {
+		if pricing, ok := s.pricingData["gpt-5.6-cyber"]; ok {
+			return pricing
+		}
+		return openAIGPT56CyberFallbackPricing
 	}
 
 	// 尝试的回退变体

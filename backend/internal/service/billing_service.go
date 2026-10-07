@@ -597,16 +597,24 @@ func (s *BillingService) initFallbackPricing() {
 		LongContextInputMultiplier:         2,
 		LongContextOutputMultiplier:        1.5,
 	}
-	// OpenAI GPT-5.6 官方价格（USD/token）。缓存写入为输入价的 1.25 倍。
+	// OpenAI API prices checked 2026-10-07, including the Sol promotion.
+	s.fallbackPrices["gpt-5.6-cyber"] = &ModelPricing{
+		InputPricePerToken: 12.5e-6, CacheReadPricePerToken: 1.25e-6,
+		CacheCreationPricePerToken: 15.625e-6, OutputPricePerToken: 75e-6,
+		CacheCreationPriceExplicit: true,
+	}
 	s.fallbackPrices["gpt-5.6-sol"] = &ModelPricing{
-		InputPricePerToken:                 5e-6,
-		InputPricePerTokenPriority:         10e-6,
-		OutputPricePerToken:                30e-6,
-		OutputPricePerTokenPriority:        60e-6,
-		CacheCreationPricePerToken:         6.25e-6,
-		CacheCreationPricePerTokenPriority: 12.5e-6,
-		CacheReadPricePerToken:             0.5e-6,
-		CacheReadPricePerTokenPriority:     1e-6,
+		InputPricePerToken:                 4e-6,
+		InputPricePerTokenPriority:         8e-6,
+		OutputPricePerToken:                20e-6,
+		OutputPricePerTokenPriority:        40e-6,
+		CacheCreationPricePerToken:         5e-6,
+		CacheCreationPricePerTokenPriority: 10e-6,
+		CacheReadPricePerToken:             0.4e-6,
+		CacheReadPricePerTokenPriority:     0.8e-6,
+		LongContextInputThreshold:          272_000,
+		LongContextInputMultiplier:         2,
+		LongContextOutputMultiplier:        1.5,
 	}
 	s.fallbackPrices["gpt-5.6-terra"] = &ModelPricing{
 		InputPricePerToken:                 2e-6,
@@ -617,6 +625,9 @@ func (s *BillingService) initFallbackPricing() {
 		CacheCreationPricePerTokenPriority: 5e-6,
 		CacheReadPricePerToken:             0.2e-6,
 		CacheReadPricePerTokenPriority:     0.4e-6,
+		LongContextInputThreshold:          272_000,
+		LongContextInputMultiplier:         2,
+		LongContextOutputMultiplier:        1.5,
 	}
 	s.fallbackPrices["gpt-5.6-luna"] = &ModelPricing{
 		InputPricePerToken:                 0.2e-6,
@@ -627,6 +638,9 @@ func (s *BillingService) initFallbackPricing() {
 		CacheCreationPricePerTokenPriority: 0.5e-6,
 		CacheReadPricePerToken:             0.02e-6,
 		CacheReadPricePerTokenPriority:     0.04e-6,
+		LongContextInputThreshold:          272_000,
+		LongContextInputMultiplier:         2,
+		LongContextOutputMultiplier:        1.5,
 	}
 
 	s.fallbackPrices["gpt-5.4-mini"] = &ModelPricing{
@@ -1200,6 +1214,8 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 			return s.fallbackPrices[normalized]
 		case "gpt-6-astra":
 			return s.fallbackPrices["gpt-6-astra"]
+		case "gpt-5.6-cyber":
+			return s.fallbackPrices["gpt-5.6-cyber"]
 		case "gpt-5.6-sol":
 			return s.fallbackPrices["gpt-5.6-sol"]
 		case "gpt-5.6-terra":
