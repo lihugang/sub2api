@@ -229,7 +229,20 @@ func TestAccountHandlerListReturnsSchedulerScoresPerGroup(t *testing.T) {
 	var high, low *struct {
 		ID             int64 `json:"id"`
 		SchedulerScore struct {
-			BaseScore float64 `json:"base_score"`
+			BaseScore                float64 `json:"base_score"`
+			AdvancedSchedulerEnabled bool    `json:"advanced_scheduler_enabled"`
+			Breakdown                struct {
+				Priority struct {
+					Value        float64 `json:"value"`
+					ValueKnown   bool    `json:"value_known"`
+					Factor       float64 `json:"factor"`
+					Weight       float64 `json:"weight"`
+					Contribution float64 `json:"contribution"`
+				} `json:"priority"`
+				Load struct {
+					ValueKnown bool `json:"value_known"`
+				} `json:"load"`
+			} `json:"breakdown"`
 		} `json:"scheduler_score"`
 		SchedulerScores []struct {
 			GroupID       *int64  `json:"group_id"`

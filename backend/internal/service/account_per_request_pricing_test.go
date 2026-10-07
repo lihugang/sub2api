@@ -78,7 +78,7 @@ func TestResolveAccountStatsCostUsesAccountPerRequestPriceBeforeChannelRules(t *
 	}
 	cs := newTestChannelServiceForStats(t, channel, 10, "openai")
 
-	cost := resolveAccountStatsCostWithAccount(account, context.Background(), cs, nil, account.ID, 10, "gpt-5.4", UsageTokens{}, 1, 99, "", time.Time{})
+	cost := resolveAccountStatsCostWithAccount(account, context.Background(), cs, nil, account.ID, 10, "gpt-5.4", UsageTokens{}, 1, 99, "", time.Time{}, true)
 	require.NotNil(t, cost)
 	require.InDelta(t, 0.07, *cost, 1e-12)
 }
