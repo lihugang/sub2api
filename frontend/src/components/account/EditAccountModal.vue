@@ -1680,6 +1680,10 @@
             data-tour="account-form-priority"
           />
           <p class="input-hint">{{ t('admin.accounts.priorityHint') }}</p>
+          <ManualPriorityProtectionField
+            v-if="account.type === 'apikey'"
+            v-model="manualPriorityProtected"
+          />
         </div>
         <div v-if="account.type !== 'oauth'">
           <label class="input-label">{{ t('admin.accounts.billingRateMultiplier') }}</label>
@@ -3205,6 +3209,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
 import HelpTooltip from '@/components/common/HelpTooltip.vue'
 import UpstreamRequestIdHeaderField from '@/components/account/UpstreamRequestIdHeaderField.vue'
+import ManualPriorityProtectionField from '@/components/account/ManualPriorityProtectionField.vue'
 import Toggle from '@/components/common/Toggle.vue'
 import Icon from '@/components/icons/Icon.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
@@ -3702,6 +3707,7 @@ const autoResetCreditEnabled = ref(false)
 const autoResetCredit5hThreshold = ref(100)
 const autoResetCredit7dThreshold = ref(100)
 const upstreamBillingRateSyncEnabled = ref(false)
+const manualPriorityProtected = ref(false)
 
 const mixedScheduling = ref(false) // For antigravity accounts: enable mixed scheduling
 // 上游ID：直接上游声明请求标识的响应头名，留空不记录。
@@ -4280,6 +4286,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
 	  : []
 	accountPerRequestPricingError.value = ''
 	upstreamBillingRateSyncEnabled.value = extra?.upstream_billing_rate_sync_enabled === true
+	manualPriorityProtected.value = extra?.manual_priority_protected === true
 	autoResetCreditEnabled.value = extra?.auto_reset_credit_enabled === true
 	autoResetCredit5hThreshold.value =
 		typeof extra?.auto_reset_credit_5h_threshold === 'number' ? extra.auto_reset_credit_5h_threshold * 100 : 100
@@ -5983,7 +5990,10 @@ const handleSubmit = async () => {
       (props.account.extra as Record<string, unknown>) || {}
     updatePayload.extra = {
       ...currentExtra,
-      account_per_request_pricing: perRequestPricing
+      account_per_request_pricing: perRequestPricing,
+      ...(props.account.type === 'apikey'
+        ? { manual_priority_protected: manualPriorityProtected.value }
+        : {})
     }
 
     // 上游ID头名只在改动时写回 extra，避免用弹窗打开时的快照覆盖运行态键。

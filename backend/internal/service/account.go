@@ -24,6 +24,18 @@ import (
 
 const AccountPerRequestPricingExtraKey = "account_per_request_pricing"
 
+// ManualPriorityProtectedExtraKey keeps successful upstream billing probes
+// from replacing an administrator's account priority. Missing means false.
+const ManualPriorityProtectedExtraKey = "manual_priority_protected"
+
+func (a *Account) IsManualPriorityProtected() bool {
+	if a == nil {
+		return false
+	}
+	protected, _ := a.Extra[ManualPriorityProtectedExtraKey].(bool)
+	return protected
+}
+
 // AccountPerRequestPricing records the fixed upstream cost for each final
 // upstream model. It is intentionally independent from user-facing billing.
 type AccountPerRequestPricing struct {

@@ -2924,7 +2924,9 @@ func (r *accountRepository) updateUpstreamBillingProbeSnapshotInTx(
 	args := []any{string(payload)}
 	placeholder := 2
 	if snapshot.AccountPriority != nil {
-		setClauses += ", priority = $" + itoa(placeholder)
+		// Read the protection flag from the row at write time: an administrator
+		// can enable it while the upstream request is still in flight.
+		setClauses += ", priority = CASE WHEN COALESCE(extra @> '{\"manual_priority_protected\": true}'::jsonb, false) THEN priority ELSE $" + itoa(placeholder) + " END"
 		args = append(args, *snapshot.AccountPriority)
 		placeholder++
 	}

@@ -126,7 +126,7 @@ func (r *upstreamBillingProbeAccountRepo) UpdateUpstreamBillingProbeSnapshot(
 		account.Extra = make(map[string]any)
 	}
 	account.Extra[UpstreamBillingProbeExtraKey] = snapshot
-	if snapshot.AccountPriority != nil {
+	if snapshot.AccountPriority != nil && !account.IsManualPriorityProtected() {
 		account.Priority = *snapshot.AccountPriority
 	}
 	if snapshot.Status == UpstreamBillingProbeStatusOK &&
@@ -481,6 +481,64 @@ func TestUpstreamBillingProbeOnlyDoesNotChangeAccountRate(t *testing.T) {
 	require.NotNil(t, account.RateMultiplier)
 	require.Equal(t, initialRate, *account.RateMultiplier)
 	require.Contains(t, account.Extra, UpstreamBillingProbeExtraKey)
+}
+
+func TestUpstreamBillingProbePriorityIsMonotonicAcrossFormerBoundary(t *testing.T) {
+	var previous int
+	for i, rate := range []float64{0, 0.2, 0.5, 0.79, 0.8, 0.81, 0.9, 1, 2} {
+		snapshot := &UpstreamBillingProbeSnapshot{
+			Status: UpstreamBillingProbeStatusOK,
+			Data:   map[string]any{"effective_rate_multiplier": rate},
+		}
+		require.NoError(t, applyUpstreamBillingProbeAccountRates(snapshot))
+		require.NotNil(t, snapshot.AccountPriority)
+		if i > 0 {
+			require.Greater(t, *snapshot.AccountPriority, previous, "rate %v must not receive a better priority", rate)
+		}
+		previous = *snapshot.AccountPriority
+	}
+	require.Equal(t, 220, previous)
+}
+
+func TestUpstreamBillingProbeProtectedPriorityKeepsRateSyncAndSnapshot(t *testing.T) {
+	for _, enableInFlight := range []bool{false, true} {
+		t.Run(fmt.Sprintf("enable_in_flight=%v", enableInFlight), func(t *testing.T) {
+			initialRate := 0.25
+			account := &Account{
+				ID: 17, Platform: PlatformOpenAI, Type: AccountTypeAPIKey,
+				Status: StatusActive, Priority: 7, RateMultiplier: &initialRate,
+				Credentials: map[string]any{"api_key": "sk-test", "base_url": "https://upstream.example"},
+				Extra: map[string]any{
+					UpstreamBillingProbeEnabledExtraKey: true, UpstreamBillingRateSyncEnabledExtraKey: true,
+					ManualPriorityProtectedExtraKey: !enableInFlight,
+				},
+			}
+			repo := &upstreamBillingProbeAccountRepo{accounts: map[int64]*Account{account.ID: account}}
+			upstream := &upstreamBillingProbeHTTPStub{}
+			if enableInFlight {
+				upstream.beforeResponse = func() {
+					require.NoError(t, repo.UpdateExtra(context.Background(), account.ID, map[string]any{ManualPriorityProtectedExtraKey: true}))
+				}
+			}
+			svc := newUpstreamBillingProbeTestService(repo, upstream, &upstreamBillingProbeSettingRepo{})
+			snapshot, err := svc.ProbeAccount(context.Background(), account.ID)
+			require.NoError(t, err)
+			require.Equal(t, UpstreamBillingProbeStatusOK, snapshot.Status)
+			require.Equal(t, 7, account.Priority)
+			require.NotNil(t, snapshot.SyncedRateMultiplier)
+			require.Equal(t, *snapshot.SyncedRateMultiplier, *account.RateMultiplier)
+			require.NotEqual(t, initialRate, *account.RateMultiplier)
+			require.Contains(t, account.Extra, UpstreamBillingProbeExtraKey)
+
+			// Explicitly disabling protection takes effect on the next success.
+			upstream.beforeResponse = nil
+			require.NoError(t, repo.UpdateExtra(context.Background(), account.ID, map[string]any{ManualPriorityProtectedExtraKey: false}))
+			snapshot, err = svc.ProbeAccount(context.Background(), account.ID)
+			require.NoError(t, err)
+			require.Equal(t, *snapshot.AccountPriority, account.Priority)
+			require.NotEqual(t, 7, account.Priority)
+		})
+	}
 }
 
 func TestUpstreamBillingProbeSyncRateRangeAndPrecision(t *testing.T) {

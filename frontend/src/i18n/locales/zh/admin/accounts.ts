@@ -1204,6 +1204,8 @@ export default {
       loadFactorHint: '提高负载因子可以提高对账号的调度频率',
       priority: '优先级',
       priorityHint: '优先级越小的账号优先使用',
+      manualPriorityProtection: '保护手动优先级',
+      manualPriorityProtectionHint: '开启后，自动和手动上游计费探测均不覆盖账号优先级；倍率同步仍可正常工作。关闭后，下次成功探测将按倍率重新计算优先级。',
       billingRateMultiplier: '账号计费倍率',
       billingRateMultiplierHint: '0 表示不计费，仅影响账号计费',
       oauthSettlementCost: 'OAuth 账号结算成本 (USD)',

@@ -1102,6 +1102,8 @@ export default {
       loadFactorHint: 'Higher load factor increases scheduling frequency',
       priority: 'Priority',
       priorityHint: 'Lower value accounts are used first',
+      manualPriorityProtection: 'Protect manual priority',
+      manualPriorityProtectionHint: 'Keep account priority unchanged during automatic and manual upstream billing probes. Rate synchronization still works. When disabled, the next successful probe recalculates priority from the rate.',
       billingRateMultiplier: 'Billing Rate Multiplier',
       billingRateMultiplierHint: '0 = free, affects account billing only',
       oauthSettlementCost: 'OAuth Account Settlement Cost (USD)',

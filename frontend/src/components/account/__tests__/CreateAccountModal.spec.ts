@@ -214,6 +214,22 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
 
   afterEach(() => vi.useRealTimers())
 
+  it('creates an API Key account with protected manual priority', async () => {
+    const wrapper = mountModal()
+    await selectButtonByText(wrapper, 'OpenAI')
+    await selectButtonByText(wrapper, 'API Key')
+    await wrapper.get('form#create-account-form input[type="text"]').setValue('protected account')
+    await wrapper.get('form#create-account-form input[type="password"]').setValue('test-api-key')
+    const toggle = wrapper.get('[data-testid="manual-priority-protection"]')
+    expect(toggle.attributes('aria-checked')).toBe('false')
+    await toggle.trigger('click')
+    await wrapper.get('[data-tour="account-form-priority"]').setValue(7)
+    await wrapper.get('form#create-account-form').trigger('submit.prevent')
+    await flushPromises()
+    expect(createAccountMock.mock.calls[0]?.[0]?.priority).toBe(7)
+    expect(createAccountMock.mock.calls[0]?.[0]?.extra?.manual_priority_protected).toBe(true)
+  })
+
   it('sets month and year expiry presets without submitting the account form', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-01-31T12:34:00'))

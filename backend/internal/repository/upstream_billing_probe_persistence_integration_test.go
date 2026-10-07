@@ -46,6 +46,44 @@ func TestAccountUpdatePreservesConcurrentProbeSnapshot(t *testing.T) {
 	require.NotContains(t, disabled.Extra, service.UpstreamBillingProbeExtraKey)
 }
 
+func TestProbeUsesCurrentManualPriorityProtection(t *testing.T) {
+	ctx := context.Background()
+	tx := testEntTx(t)
+	repo := newAccountRepositoryWithSQL(tx.Client(), tx, nil)
+	account := mustCreateAccount(t, tx.Client(), &service.Account{
+		Name: "priority-protected-probe", Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKey,
+		Priority: 7, Credentials: map[string]any{"api_key": "sk-test"},
+		Extra: map[string]any{
+			service.UpstreamBillingProbeEnabledExtraKey:    true,
+			service.UpstreamBillingRateSyncEnabledExtraKey: true,
+		},
+	})
+	stale, err := repo.GetByID(ctx, account.ID)
+	require.NoError(t, err)
+	// Protect the priority after the probe has loaded its account snapshot.
+	require.NoError(t, repo.UpdateExtra(ctx, account.ID, map[string]any{service.ManualPriorityProtectedExtraKey: true}))
+	priority, rate := 110, 0.9
+	snapshot := &service.UpstreamBillingProbeSnapshot{
+		Status: service.UpstreamBillingProbeStatusOK, AccountPriority: &priority,
+		LastAttemptAt: time.Now().UTC(),
+	}
+	require.NoError(t, repo.UpdateUpstreamBillingProbeSnapshot(ctx, stale, snapshot, &rate))
+	got, err := repo.GetByID(ctx, account.ID)
+	require.NoError(t, err)
+	require.Equal(t, 7, got.Priority)
+	require.True(t, got.IsManualPriorityProtected())
+	require.Equal(t, rate, *got.RateMultiplier)
+	require.Contains(t, got.Extra, service.UpstreamBillingProbeExtraKey)
+
+	require.NoError(t, repo.UpdateExtra(ctx, account.ID, map[string]any{service.ManualPriorityProtectedExtraKey: false}))
+	got, err = repo.GetByID(ctx, account.ID)
+	require.NoError(t, err)
+	require.NoError(t, repo.UpdateUpstreamBillingProbeSnapshot(ctx, got, snapshot, nil))
+	got, err = repo.GetByID(ctx, account.ID)
+	require.NoError(t, err)
+	require.Equal(t, priority, got.Priority)
+}
+
 func TestAdminAccountEditPreservesRateSynchronizedAfterLoad(t *testing.T) {
 	ctx := context.Background()
 	tx := testEntTx(t)

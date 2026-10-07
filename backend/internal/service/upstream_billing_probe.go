@@ -1139,11 +1139,7 @@ func applyUpstreamBillingProbeAccountRates(snapshot *UpstreamBillingProbeSnapsho
 	if !ok || rate < 0 || math.IsNaN(rate) || math.IsInf(rate, 0) {
 		return fmt.Errorf("invalid effective billing multiplier")
 	}
-	factor := 10.0
-	if rate <= 0.8 {
-		factor = 100
-	}
-	priorityValue := math.Round(rate*factor + 20)
+	priorityValue := math.Round(rate*100 + 20)
 	maxInt := float64(^uint(0) >> 1)
 	if math.IsNaN(priorityValue) || math.IsInf(priorityValue, 0) || priorityValue < 0 || priorityValue > maxInt {
 		return fmt.Errorf("derived account priority is out of range")

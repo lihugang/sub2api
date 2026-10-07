@@ -441,7 +441,19 @@ func normalizeAnthropicMockCacheExtra(platform, accountType string, extra map[st
 
 // Grok media eligibility helpers live in account_grok_media_eligibility.go.
 
+func validateManualPriorityProtectionExtra(extra map[string]any) error {
+	if value, exists := extra[ManualPriorityProtectedExtraKey]; exists {
+		if _, ok := value.(bool); !ok {
+			return infraerrors.BadRequest("INVALID_MANUAL_PRIORITY_PROTECTED", "manual_priority_protected must be a boolean")
+		}
+	}
+	return nil
+}
+
 func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]any) (*Account, error) {
+	if err := validateManualPriorityProtectionExtra(accountExtra); err != nil {
+		return nil, err
+	}
 	if input.Platform == PlatformTypeSafe && input.Type != AccountTypeAPIKey {
 		return nil, errors.New("typesafe accounts only support apikey credentials")
 	}
@@ -642,6 +654,9 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 	}
 	var normalizedExtra map[string]any
 	if input.Extra != nil {
+		if err := validateManualPriorityProtectionExtra(input.Extra); err != nil {
+			return nil, err
+		}
 		if err := ValidateAccountPerRequestPricingExtra(input.Extra); err != nil {
 			return nil, err
 		}
@@ -774,6 +789,11 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 			}
 		}
 		normalizedExtra = prepareCodexFingerprintExtraForUpdate(account, normalizedExtra)
+		// An older client or unrelated extra edit must not silently unprotect
+		// the priority. Disabling protection requires an explicit false.
+		if _, provided := normalizedExtra[ManualPriorityProtectedExtraKey]; !provided && account.IsManualPriorityProtected() {
+			normalizedExtra[ManualPriorityProtectedExtraKey] = true
+		}
 		account.Extra = normalizedExtra
 		if account.Platform == PlatformAntigravity && wasOveragesEnabled && !account.IsOveragesEnabled() {
 			delete(account.Extra, "antigravity_credits_overages") // 清理旧版 overages 运行态
@@ -1023,6 +1043,9 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 // UpdateAccountExtra 仅对 Extra JSONB 做 key 级合并，避免覆盖其它运行态键
 // （如 model_rate_limits / passive_usage_* 等）。
 func (s *adminServiceImpl) UpdateAccountExtra(ctx context.Context, id int64, updates map[string]any) error {
+	if err := validateManualPriorityProtectionExtra(updates); err != nil {
+		return err
+	}
 	updates = sanitizedCodexFingerprintExtraUpdates(updates)
 	updates = stripOpenAIAutoResetCreditManagedExtra(updates, true)
 	delete(updates, UpstreamBillingProbeEnabledExtraKey)
@@ -1051,6 +1074,9 @@ func (s *adminServiceImpl) UpdateAccountExtra(ctx context.Context, id int64, upd
 // BulkUpdateAccounts updates multiple accounts in one request.
 // It merges credentials/extra keys instead of overwriting the whole object.
 func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUpdateAccountsInput) (*BulkUpdateAccountsResult, error) {
+	if err := validateManualPriorityProtectionExtra(input.Extra); err != nil {
+		return nil, err
+	}
 	// Managed probe/session state may only enter through dedicated typed endpoints.
 	input.Extra = sanitizedCodexFingerprintExtraUpdates(input.Extra)
 	input.Extra = stripOpenAIAutoResetCreditManagedExtra(input.Extra, true)
